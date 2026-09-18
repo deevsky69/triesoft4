@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Triesoft.Cli/Triesoft.Cli.csproj" />
+    <Project Path="src/Triesoft.Core/Triesoft.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Triesoft.Core.Tests/Triesoft.Core.Tests.csproj" />
+  </Folder>
+</Solution>
