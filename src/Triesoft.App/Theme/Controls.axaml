@@ -1,0 +1,76 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="{StaticResource Brush.Danger}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="Button.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextOnSidebarMuted}" />
+    <Setter Property="Padding" Value="16,12" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.nav.active">
+    <Setter Property="Background" Value="{StaticResource Brush.SidebarActive}" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextOnSidebar}" />
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="24" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="TextBlock.error-text">
+    <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.success-text">
+    <Setter Property="Foreground" Value="{StaticResource Brush.Success}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="Ellipse.status-dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+  </Style>
+</Styles>

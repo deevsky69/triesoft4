@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:km="clr-namespace:Triesoft.Core.KeyManagement;assembly=Triesoft.Core"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.KeyManagementView"
+             x:DataType="vm:KeyManagementViewModel">
+    <StackPanel Spacing="24">
+
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Kunci Bulanan" Classes="h2" />
+
+                <ItemsControl ItemsSource="{Binding Keys}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="km:KeyMetadata">
+                            <Grid ColumnDefinitions="Auto,160,90,110,110,*" Margin="0,8" ColumnSpacing="12">
+                                <Ellipse Grid.Column="0" Classes="status-dot"
+                                         Fill="{Binding Status, Converter={StaticResource KeyStatusToBrushConverter}}"
+                                         VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding KeyId}" Classes="body" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding Status}" Classes="secondary" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding ValidFrom, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                           Classes="caption" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding ValidUntil, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                           Classes="caption" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="5" Text="{Binding StatusReason}" Classes="caption"
+                                           VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" MaxWidth="480" HorizontalAlignment="Left">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Impor Kunci Baru" Classes="h2" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Key ID" Classes="caption" />
+                    <TextBox Text="{Binding NewKeyId}" PlaceholderText="mis. 2026-09-POLDA-JATIM" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Kunci (hex, 64 karakter)" Classes="caption" />
+                    <TextBox Text="{Binding NewKeyHex}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="Berlaku Dari" Classes="caption" />
+                        <CalendarDatePicker SelectedDate="{Binding NewValidFrom}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBlock Text="Berlaku Sampai" Classes="caption" />
+                        <CalendarDatePicker SelectedDate="{Binding NewValidUntil}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+                <Button Content="Impor" Classes="primary" Command="{Binding ImportCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" MaxWidth="480" HorizontalAlignment="Left">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Cabut / Hapus Kunci Terpilih" Classes="h2" />
+                <ComboBox ItemsSource="{Binding Keys}" SelectedItem="{Binding SelectedKey}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="km:KeyMetadata">
+                            <TextBlock Text="{Binding KeyId}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Alasan pencabutan (wajib untuk Cabut)" Classes="caption" />
+                    <TextBox Text="{Binding RevokeReason}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Cabut (Revoke)" Classes="danger" Click="OnRevokeClick" />
+                    <Button Content="Hapus Permanen (Purge)" Classes="danger" Click="OnPurgeClick" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
+                   IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+</UserControl>

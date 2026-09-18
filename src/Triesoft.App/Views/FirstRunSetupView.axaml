@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.FirstRunSetupView"
+             x:DataType="vm:FirstRunSetupViewModel">
+    <Grid ColumnDefinitions="1.1*,1*">
+        <Border Grid.Column="0" Background="{StaticResource Brush.Sidebar}">
+            <StackPanel VerticalAlignment="Center" Margin="56" Spacing="12">
+                <TextBlock Text="TRIESOFT 4" Foreground="{StaticResource Brush.TextOnSidebar}"
+                           FontSize="34" FontWeight="Bold" />
+                <TextBlock Text="Setup Awal" Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="16" />
+                <TextBlock TextWrapping="Wrap"
+                           Text="Belum ada akun di instalasi ini. Buat akun Admin pertama untuk memulai -- akun ini bisa mendaftarkan dan memverifikasi user lain setelahnya."
+                           Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="13" Margin="0,24,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Background="{StaticResource Brush.Background}">
+            <Border Classes="card" Width="380" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Buat Akun Admin Pertama" Classes="h2" />
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Username" Classes="caption" />
+                        <TextBox Text="{Binding Username}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Nama Lengkap" Classes="caption" />
+                        <TextBox Text="{Binding DisplayName}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Password" Classes="caption" />
+                        <TextBox Text="{Binding Password}" PasswordChar="•" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Konfirmasi Password" Classes="caption" />
+                        <TextBox Text="{Binding ConfirmPassword}" PasswordChar="•" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+
+                    <Button Content="Buat Akun Admin" Classes="primary" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" Command="{Binding CreateFirstAdminCommand}" />
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

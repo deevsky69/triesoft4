@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:id="clr-namespace:Triesoft.Core.Identity;assembly=Triesoft.Core"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.UserManagementView"
+             x:DataType="vm:UserManagementViewModel">
+    <StackPanel Spacing="24">
+
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Daftar User" Classes="h2" />
+                <ItemsControl ItemsSource="{Binding Users}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="id:UserAccount">
+                            <Grid ColumnDefinitions="Auto,160,160,90,*" Margin="0,8" ColumnSpacing="12">
+                                <Ellipse Grid.Column="0" Classes="status-dot"
+                                         Fill="{Binding Status, Converter={StaticResource UserStatusToBrushConverter}}"
+                                         VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Username}" Classes="body" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding DisplayName}" Classes="secondary" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding Role}" Classes="caption" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding Status}" Classes="caption" VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" MaxWidth="480" HorizontalAlignment="Left">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Daftarkan User Baru" Classes="h2" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Username" Classes="caption" />
+                    <TextBox Text="{Binding NewUsername}" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Nama Lengkap" Classes="caption" />
+                    <TextBox Text="{Binding NewDisplayName}" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Password Sementara" Classes="caption" />
+                    <TextBox Text="{Binding NewPassword}" PasswordChar="•" />
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Peran" Classes="caption" />
+                    <ComboBox ItemsSource="{Binding AvailableRoles}" SelectedItem="{Binding NewRole}"
+                              HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <Button Content="Daftarkan" Classes="primary" Command="{Binding CreateUserCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" MaxWidth="480" HorizontalAlignment="Left">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Kelola User Terpilih" Classes="h2" />
+                <ComboBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="id:UserAccount">
+                            <TextBlock Text="{Binding Username}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Verifikasi" Classes="primary" Command="{Binding VerifySelectedCommand}" />
+                    <Button Content="Nonaktifkan" Classes="danger" Click="OnDisableClick" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
+                   IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+</UserControl>

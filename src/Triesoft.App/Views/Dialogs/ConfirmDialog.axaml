@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Triesoft.App.Views.Dialogs.ConfirmDialog"
+        Width="420" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Title="Konfirmasi"
+        Background="{StaticResource Brush.Surface}">
+    <StackPanel Margin="24" Spacing="16">
+        <TextBlock Name="MessageText" Classes="body" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Batal" Classes="secondary" Click="OnCancel" />
+            <Button Name="ConfirmButtonElement" Content="Konfirmasi" Classes="danger" Click="OnConfirm" />
+        </StackPanel>
+    </StackPanel>
+</Window>

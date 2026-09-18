@@ -25,7 +25,8 @@ public static class EnvelopeCipher
         Stream output,
         MonthlyKey kek,
         string originalFileName,
-        int chunkSize = Ts4Constants.DefaultChunkSize)
+        int chunkSize = Ts4Constants.DefaultChunkSize,
+        IProgress<double>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(plaintextInput);
         ArgumentNullException.ThrowIfNull(output);
@@ -77,11 +78,37 @@ public static class EnvelopeCipher
             var headerBytes = Ts4FileFormat.SerializeHeader(header);
             output.Write(headerBytes);
 
-            EncryptChunks(plaintextInput, output, dek, contentBaseNonce, headerBytes, chunkSize);
+            EncryptChunks(plaintextInput, output, dek, contentBaseNonce, headerBytes, chunkSize, progress);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(dek);
+        }
+    }
+
+    /// <summary>
+    /// Membaca KeyId dari header sebuah container .ts4 TANPA butuh kunci apa pun (KeyId tersimpan
+    /// plaintext di header -- hanya DEK dan nama file yang terenkripsi). Dipakai alur dekripsi UI:
+    /// tentukan dulu kunci bulanan mana yang dibutuhkan sebelum memintanya dari key store, baru
+    /// panggil <see cref="Decrypt"/>. Butuh stream yang bisa di-seek -- posisi stream dikembalikan
+    /// ke titik semula sebelum method ini kembali, supaya stream yang sama bisa langsung dipakai
+    /// lagi untuk <see cref="Decrypt"/>.
+    /// </summary>
+    public static string PeekKeyId(Stream ciphertextInput)
+    {
+        ArgumentNullException.ThrowIfNull(ciphertextInput);
+        if (!ciphertextInput.CanSeek)
+            throw new NotSupportedException("PeekKeyId butuh stream yang bisa di-seek.");
+
+        var startPosition = ciphertextInput.Position;
+        try
+        {
+            var (header, _) = Ts4FileFormat.ReadHeader(ciphertextInput);
+            return header.KeyId;
+        }
+        finally
+        {
+            ciphertextInput.Position = startPosition;
         }
     }
 
@@ -92,7 +119,7 @@ public static class EnvelopeCipher
     /// rusak, atau file dipotong/ditambah data, operasi ini melempar exception dan caller harus
     /// membuang isi <paramref name="output"/> (jangan dipakai sebagai hasil parsial).
     /// </summary>
-    public static DecryptResult Decrypt(Stream ciphertextInput, Stream output, MonthlyKey kek)
+    public static DecryptResult Decrypt(Stream ciphertextInput, Stream output, MonthlyKey kek, IProgress<double>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(ciphertextInput);
         ArgumentNullException.ThrowIfNull(output);
@@ -124,7 +151,7 @@ public static class EnvelopeCipher
 
             var originalFileName = Encoding.UTF8.GetString(nameBuffer);
 
-            DecryptChunks(ciphertextInput, output, dek, header.ContentBaseNonce, headerBytes, (int)header.ChunkSize);
+            DecryptChunks(ciphertextInput, output, dek, header.ContentBaseNonce, headerBytes, (int)header.ChunkSize, progress);
 
             return new DecryptResult(originalFileName, header.KeyId, header.AlgorithmProfile);
         }
@@ -135,7 +162,8 @@ public static class EnvelopeCipher
     }
 
     private static void EncryptChunks(
-        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize)
+        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize,
+        IProgress<double>? progress)
     {
         using var cipher = new AesGcm(dek, Ts4Constants.GcmTagSize);
         var reader = new ChunkedPlaintextReader(input, chunkSize);
@@ -143,6 +171,7 @@ public static class EnvelopeCipher
         var cipherBuffer = new byte[chunkSize];
         var tag = new byte[Ts4Constants.GcmTagSize];
         var aad = BuildAadBuffer(headerBytes);
+        var totalBytes = input.CanSeek ? input.Length - input.Position : (long?)null;
 
         Span<byte> lenPrefix = stackalloc byte[4];
 
@@ -167,6 +196,9 @@ public static class EnvelopeCipher
                 CryptographicOperations.ZeroMemory(plainSpan);
                 counter++;
 
+                if (totalBytes is > 0)
+                    progress?.Report(Math.Min(1.0, (double)input.Position / totalBytes.Value));
+
                 if (isFinal) break;
             }
         }
@@ -174,13 +206,17 @@ public static class EnvelopeCipher
         {
             CryptographicOperations.ZeroMemory(plainBuffer);
         }
+
+        progress?.Report(1.0);
     }
 
     private static void DecryptChunks(
-        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize)
+        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize,
+        IProgress<double>? progress)
     {
         using var cipher = new AesGcm(dek, Ts4Constants.GcmTagSize);
         var aad = BuildAadBuffer(headerBytes);
+        var totalBytes = input.CanSeek ? input.Length : (long?)null;
 
         ulong counter = 0;
         bool sawFinal = false;
@@ -230,6 +266,9 @@ public static class EnvelopeCipher
 
             counter++;
 
+            if (totalBytes is > 0)
+                progress?.Report(Math.Min(1.0, (double)input.Position / totalBytes.Value));
+
             if (isFinal)
             {
                 sawFinal = true;
@@ -244,6 +283,8 @@ public static class EnvelopeCipher
         Span<byte> trailing = stackalloc byte[1];
         if (StreamHelpers.TryReadExactly(input, trailing))
             throw new InvalidDataException("Data tambahan terdeteksi setelah akhir file — kemungkinan file telah dimodifikasi.");
+
+        progress?.Report(1.0);
     }
 
     private static byte[] BuildAadBuffer(byte[] headerBytes)

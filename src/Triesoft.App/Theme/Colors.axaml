@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Palet untuk tool sandi instansi pemerintah: navy gelap sebagai identitas (tegas, institusional),
+    permukaan netral terang untuk area kerja, aksen biru terkontrol untuk aksi utama, dan
+    merah-maroon KHUSUS aksi destruktif (revoke/purge/nonaktifkan) supaya konsisten dan tidak
+    tertukar dengan aksi biasa.
+  -->
+
+  <Color x:Key="Color.Sidebar">#17233A</Color>
+  <Color x:Key="Color.SidebarActive">#28395B</Color>
+  <Color x:Key="Color.Background">#F4F5F7</Color>
+  <Color x:Key="Color.Surface">#FFFFFF</Color>
+  <Color x:Key="Color.Border">#E1E4E9</Color>
+  <Color x:Key="Color.TextPrimary">#1B2430</Color>
+  <Color x:Key="Color.TextSecondary">#5B6472</Color>
+  <Color x:Key="Color.TextOnSidebar">#E7ECF5</Color>
+  <Color x:Key="Color.TextOnSidebarMuted">#93A2BC</Color>
+  <Color x:Key="Color.Accent">#2E5BFF</Color>
+  <Color x:Key="Color.AccentHover">#274ED1</Color>
+  <Color x:Key="Color.Danger">#B3261E</Color>
+  <Color x:Key="Color.DangerHover">#8C1D17</Color>
+  <Color x:Key="Color.Success">#1E7F4B</Color>
+  <Color x:Key="Color.Warning">#B7791F</Color>
+  <Color x:Key="Color.Neutral">#8A93A2</Color>
+
+  <SolidColorBrush x:Key="Brush.Sidebar" Color="{StaticResource Color.Sidebar}" />
+  <SolidColorBrush x:Key="Brush.SidebarActive" Color="{StaticResource Color.SidebarActive}" />
+  <SolidColorBrush x:Key="Brush.Background" Color="{StaticResource Color.Background}" />
+  <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}" />
+  <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource Color.Border}" />
+  <SolidColorBrush x:Key="Brush.TextPrimary" Color="{StaticResource Color.TextPrimary}" />
+  <SolidColorBrush x:Key="Brush.TextSecondary" Color="{StaticResource Color.TextSecondary}" />
+  <SolidColorBrush x:Key="Brush.TextOnSidebar" Color="{StaticResource Color.TextOnSidebar}" />
+  <SolidColorBrush x:Key="Brush.TextOnSidebarMuted" Color="{StaticResource Color.TextOnSidebarMuted}" />
+  <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
+  <SolidColorBrush x:Key="Brush.AccentHover" Color="{StaticResource Color.AccentHover}" />
+  <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}" />
+  <SolidColorBrush x:Key="Brush.DangerHover" Color="{StaticResource Color.DangerHover}" />
+  <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />
+  <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}" />
+  <SolidColorBrush x:Key="Brush.Neutral" Color="{StaticResource Color.Neutral}" />
+</ResourceDictionary>

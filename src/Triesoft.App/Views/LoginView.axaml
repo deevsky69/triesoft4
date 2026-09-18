@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             mc:Ignorable="d"
+             x:Class="Triesoft.App.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+    <Grid ColumnDefinitions="1.1*,1*">
+        <Border Grid.Column="0" Background="{StaticResource Brush.Sidebar}">
+            <StackPanel VerticalAlignment="Center" Margin="56" Spacing="12">
+                <TextBlock Text="TRIESOFT 4" Foreground="{StaticResource Brush.TextOnSidebar}"
+                           FontSize="34" FontWeight="Bold" />
+                <TextBlock Text="Tribrata Encryption Software"
+                           Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="16" />
+                <TextBlock Text="Bidsandi Baintelkam Polri"
+                           Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="13" Margin="0,24,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Background="{StaticResource Brush.Background}">
+            <Border Classes="card" Width="360" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Masuk" Classes="h2" />
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Username" Classes="caption" />
+                        <TextBox Text="{Binding Username}" PlaceholderText="username" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Password" Classes="caption" />
+                        <TextBox Text="{Binding Password}" PasswordChar="•" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+
+                    <Button Content="Masuk" Classes="primary" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" Command="{Binding LoginCommand}" />
+
+                    <Button Content="Setup awal (belum ada akun)" Classes="secondary"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Command="{Binding GoToSetupAwalCommand}"
+                            IsVisible="{Binding ShowSetupAwalLink}" />
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

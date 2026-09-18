@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.EncryptView"
+             x:DataType="vm:EncryptViewModel">
+    <Border Classes="card" MaxWidth="640" HorizontalAlignment="Left">
+        <StackPanel Spacing="16">
+            <TextBlock Text="Pilih file yang akan dienkripsi (PDF, Word, PPT, gambar, dll)." Classes="body" />
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0" Text="{Binding SelectedFilePath}" IsReadOnly="True"
+                         PlaceholderText="Belum ada file dipilih" />
+                <Button Grid.Column="1" Content="Pilih File..." Classes="secondary" Click="OnBrowseClick" />
+            </Grid>
+
+            <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="1" IsVisible="{Binding IsBusy}" />
+
+            <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                       IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
+                       IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+
+            <Button Content="Enkripsi" Classes="primary" Command="{Binding EncryptCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+    </Border>
+</UserControl>

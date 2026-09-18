@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+        x:Class="Triesoft.App.MainWindow"
+        x:DataType="vm:AppShellViewModel"
+        Title="TRIESOFT 4 — Tribrata Encryption Software"
+        Width="1140" Height="740"
+        MinWidth="900" MinHeight="600"
+        Background="{StaticResource Brush.Background}">
+    <ContentControl Content="{Binding CurrentView}" />
+</Window>

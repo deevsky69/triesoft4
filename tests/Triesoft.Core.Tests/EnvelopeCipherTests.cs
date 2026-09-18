@@ -163,4 +163,87 @@ public class EnvelopeCipherTests
         EnvelopeCipher.Encrypt(input, output, kek, fileName, chunkSize);
         return output.ToArray();
     }
+
+    [Fact]
+    public void PeekKeyId_ReturnsKeyId_WithoutNeedingAnyKey()
+    {
+        using var kek = NewKey("2026-09-PEEK-TEST");
+        var encrypted = EncryptSample(kek, "a.pdf", "data"u8.ToArray());
+
+        using var stream = new MemoryStream(encrypted);
+        var keyId = EnvelopeCipher.PeekKeyId(stream);
+
+        Assert.Equal("2026-09-PEEK-TEST", keyId);
+    }
+
+    [Fact]
+    public void PeekKeyId_ResetsStreamPosition_SoDecryptCanFollow()
+    {
+        using var kek = NewKey("2026-09-PEEK-RESET");
+        var plaintext = "isi rahasia"u8.ToArray();
+        var encrypted = EncryptSample(kek, "a.pdf", plaintext);
+
+        using var stream = new MemoryStream(encrypted);
+        var keyId = EnvelopeCipher.PeekKeyId(stream);
+        Assert.Equal(0, stream.Position);
+
+        using var output = new MemoryStream();
+        var result = EnvelopeCipher.Decrypt(stream, output, kek);
+
+        Assert.Equal(keyId, result.KeyId);
+        Assert.Equal(plaintext, output.ToArray());
+    }
+
+    [Fact]
+    public void PeekKeyId_NonSeekableStream_Throws()
+    {
+        using var kek = NewKey();
+        var encrypted = EncryptSample(kek, "a.pdf", "data"u8.ToArray());
+
+        using var nonSeekable = new NonSeekableStream(new MemoryStream(encrypted));
+        Assert.Throws<NotSupportedException>(() => EnvelopeCipher.PeekKeyId(nonSeekable));
+    }
+
+    [Fact]
+    public void Encrypt_ReportsProgress_ReachingOne()
+    {
+        using var kek = NewKey();
+        var plaintext = RandomNumberGenerator.GetBytes(500_000);
+        var progress = new SyncProgress<double>();
+
+        using var input = new MemoryStream(plaintext);
+        using var output = new MemoryStream();
+        EnvelopeCipher.Encrypt(input, output, kek, "besar.pdf", chunkSize: 4096, progress: progress);
+
+        Assert.NotEmpty(progress.Reports);
+        Assert.Equal(1.0, progress.Reports[^1]);
+    }
+
+    // System.Progress<T> memarshal callback lewat SynchronizationContext/ThreadPool (asinkron) --
+    // tidak cocok untuk assertion langsung setelah pemanggilan sinkron di test. IProgress<T> ini
+    // memanggil balik secara langsung/sinkron, sama seperti EnvelopeCipher memanggilnya.
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        public List<T> Reports { get; } = [];
+        public void Report(T value) => Reports.Add(value);
+    }
+
+    private sealed class NonSeekableStream(Stream inner) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override void Flush() => inner.Flush();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
 }

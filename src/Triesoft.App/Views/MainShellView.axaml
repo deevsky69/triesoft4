@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
+             x:Class="Triesoft.App.Views.MainShellView"
+             x:DataType="vm:MainShellViewModel">
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="vm:EncryptViewModel">
+            <views:EncryptView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:DecryptViewModel">
+            <views:DecryptView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:KeyManagementViewModel">
+            <views:KeyManagementView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:UserManagementViewModel">
+            <views:UserManagementView />
+        </DataTemplate>
+    </UserControl.DataTemplates>
+
+    <Grid ColumnDefinitions="240,*">
+        <Border Grid.Column="0" Background="{StaticResource Brush.Sidebar}">
+            <DockPanel Margin="16">
+                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="8,8,8,24">
+                    <TextBlock Text="TRIESOFT 4" Foreground="{StaticResource Brush.TextOnSidebar}"
+                               FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding CurrentUser.DisplayName}"
+                               Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="12" />
+                    <TextBlock Text="{Binding CurrentUser.Role}"
+                               Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="11" />
+                </StackPanel>
+
+                <Button DockPanel.Dock="Bottom" Content="Keluar" Classes="nav" Command="{Binding LogoutCommand}" />
+
+                <StackPanel Spacing="4">
+                    <Button Content="Enkripsi File" Classes="nav" Classes.active="{Binding IsEncryptPageActive}"
+                            Command="{Binding NavigateToEncryptCommand}" />
+                    <Button Content="Dekripsi File" Classes="nav" Classes.active="{Binding IsDecryptPageActive}"
+                            Command="{Binding NavigateToDecryptCommand}" />
+                    <Button Content="Kelola Kunci" Classes="nav" Classes.active="{Binding IsKeyManagementPageActive}"
+                            Command="{Binding NavigateToKeyManagementCommand}" IsVisible="{Binding IsAdmin}" />
+                    <Button Content="Kelola User" Classes="nav" Classes.active="{Binding IsUserManagementPageActive}"
+                            Command="{Binding NavigateToUserManagementCommand}" IsVisible="{Binding IsAdmin}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*" Background="{StaticResource Brush.Background}">
+            <Border Grid.Row="0" Padding="32,24,32,16">
+                <TextBlock Text="{Binding CurrentPageTitle}" Classes="h1" />
+            </Border>
+            <ScrollViewer Grid.Row="1" Padding="32,0,32,32">
+                <ContentControl Content="{Binding CurrentPage}" />
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
