@@ -1,4 +1,6 @@
+using System.Globalization;
 using Triesoft.Core.Crypto;
+using Triesoft.Core.KeyManagement;
 
 if (args.Length < 1)
 {
@@ -15,6 +17,7 @@ try
     {
         "encrypt" => RunEncrypt(rest),
         "decrypt" => RunDecrypt(rest),
+        "key" => RunKey(rest),
         _ => Unknown(),
     };
 }
@@ -90,6 +93,113 @@ int RunDecrypt(string[] cliArgs)
     return 0;
 }
 
+int RunKey(string[] cliArgs)
+{
+    if (cliArgs.Length < 1)
+    {
+        PrintUsage();
+        return 1;
+    }
+
+    var subcommand = cliArgs[0].ToLowerInvariant();
+    var subRest = cliArgs.Skip(1).ToArray();
+
+    return subcommand switch
+    {
+        "import" => RunKeyImport(subRest),
+        "list" => RunKeyList(subRest),
+        "revoke" => RunKeyRevoke(subRest),
+        "purge" => RunKeyPurge(subRest),
+        _ => Unknown(),
+    };
+}
+
+int RunKeyImport(string[] cliArgs)
+{
+    var opts = ParseOptions(cliArgs);
+    var manager = GetKeyManager(opts);
+
+    var keyId = RequireOption(opts, "key-id");
+    var keyHex = RequireOption(opts, "key");
+    var validFrom = ParseDate(RequireOption(opts, "valid-from"));
+    var validUntil = ParseDate(RequireOption(opts, "valid-until"));
+
+    var keyBytes = Convert.FromHexString(keyHex);
+    manager.ImportMonthlyKey(keyId, keyBytes, validFrom, validUntil);
+
+    Console.WriteLine($"OK: kunci '{keyId}' diimpor sebagai Active (berlaku {validFrom:yyyy-MM-dd} s/d {validUntil:yyyy-MM-dd}).");
+    return 0;
+}
+
+int RunKeyList(string[] cliArgs)
+{
+    var opts = ParseOptions(cliArgs);
+    var manager = GetKeyManager(opts);
+
+    var keys = manager.ListKeys();
+    if (keys.Count == 0)
+    {
+        Console.WriteLine("(belum ada kunci di store ini)");
+        return 0;
+    }
+
+    foreach (var k in keys.OrderBy(k => k.ImportedAt))
+    {
+        var reason = k.StatusReason is { } r ? $" ({r})" : "";
+        Console.WriteLine($"{k.KeyId,-24} {k.Status,-8} valid {k.ValidFrom:yyyy-MM-dd}..{k.ValidUntil:yyyy-MM-dd}{reason}");
+    }
+    return 0;
+}
+
+int RunKeyRevoke(string[] cliArgs)
+{
+    var opts = ParseOptions(cliArgs);
+    var manager = GetKeyManager(opts);
+
+    var keyId = RequireOption(opts, "key-id");
+    var reason = RequireOption(opts, "reason");
+
+    manager.RevokeKey(keyId, reason);
+    Console.WriteLine($"OK: kunci '{keyId}' dicabut (revoked). Material sudah dihapus permanen.");
+    return 0;
+}
+
+int RunKeyPurge(string[] cliArgs)
+{
+    var opts = ParseOptions(cliArgs);
+    var manager = GetKeyManager(opts);
+
+    var keyId = RequireOption(opts, "key-id");
+
+    manager.PurgeExpiredKey(keyId);
+    Console.WriteLine($"OK: kunci '{keyId}' di-purge (dihapus permanen).");
+    return 0;
+}
+
+MonthlyKeyManager GetKeyManager((string? Positional, Dictionary<string, string> Options) opts)
+{
+    var storeDir = RequireOption(opts, "store");
+    var store = new FileKeyStore(storeDir, CreateProtector());
+    return new MonthlyKeyManager(store);
+}
+
+IKeyProtector CreateProtector()
+{
+    if (OperatingSystem.IsWindows())
+        return new DpapiKeyProtector();
+
+    Console.Error.WriteLine(
+        "PERINGATAN: berjalan di non-Windows -- memakai protector passthrough yang TIDAK AMAN, " +
+        "hanya untuk pengembangan lokal. Jangan pernah dipakai di lingkungan produksi.");
+    return new DevInsecurePassthroughProtector();
+}
+
+string RequireOption((string? Positional, Dictionary<string, string> Options) opts, string name) =>
+    opts.Options.GetValueOrDefault(name) ?? throw new ArgumentException($"--{name} wajib diisi.");
+
+DateTimeOffset ParseDate(string value) =>
+    DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
+
 static (string? Positional, Dictionary<string, string> Options) ParseOptions(string[] cliArgs)
 {
     string? positional = null;
@@ -123,7 +233,25 @@ static void PrintUsage()
           triesoft-cli encrypt <file> --key-id <id> --key <64-hex-char> [--out <file.ts4>]
           triesoft-cli decrypt <file.ts4> --key-id <id> --key <64-hex-char> [--out <file>]
 
-        Contoh:
-          triesoft-cli encrypt laporan.pdf --key-id 2026-09-TEST --key 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+          triesoft-cli key import --store <dir> --key-id <id> --key <64-hex-char> --valid-from <ISO8601> --valid-until <ISO8601>
+          triesoft-cli key list   --store <dir>
+          triesoft-cli key revoke --store <dir> --key-id <id> --reason <teks>
+          triesoft-cli key purge  --store <dir> --key-id <id>
+
+        Catatan: perlindungan kunci di store memakai Windows DPAPI. Di luar Windows (mis. saat
+        development di macOS/Linux), CLI ini otomatis jatuh ke protector passthrough TIDAK AMAN
+        khusus pengembangan lokal, dengan peringatan di stderr setiap dipakai.
         """);
+}
+
+/// <summary>
+/// PERINGATAN: protector palsu yang TIDAK melindungi apa pun -- byte kunci ditulis apa adanya.
+/// Hanya ada di Triesoft.Cli (dev harness), TIDAK PERNAH di Triesoft.Core, supaya library
+/// produksi tidak punya jalan pintas tidak aman. Dipakai semata supaya alur key management bisa
+/// diuji end-to-end di mesin non-Windows (DPAPI tidak tersedia di luar Windows).
+/// </summary>
+sealed class DevInsecurePassthroughProtector : IKeyProtector
+{
+    public byte[] Protect(ReadOnlySpan<byte> plaintext) => plaintext.ToArray();
+    public byte[] Unprotect(ReadOnlySpan<byte> protectedBytes) => protectedBytes.ToArray();
 }
