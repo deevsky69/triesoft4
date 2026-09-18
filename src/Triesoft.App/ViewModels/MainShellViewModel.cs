@@ -22,6 +22,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
     public bool IsDecryptPageActive => CurrentPage is DecryptViewModel;
     public bool IsKeyManagementPageActive => CurrentPage is KeyManagementViewModel;
     public bool IsUserManagementPageActive => CurrentPage is UserManagementViewModel;
+    public bool IsAuditLogPageActive => CurrentPage is AuditLogViewModel;
 
     public event EventHandler? LoggedOut;
 
@@ -31,6 +32,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
         OnPropertyChanged(nameof(IsDecryptPageActive));
         OnPropertyChanged(nameof(IsKeyManagementPageActive));
         OnPropertyChanged(nameof(IsUserManagementPageActive));
+        OnPropertyChanged(nameof(IsAuditLogPageActive));
     }
 
     public void Initialize(UserAccount user)
@@ -62,6 +64,13 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
         var vm = services.GetRequiredService<UserManagementViewModel>();
         vm.CurrentAdminUsername = CurrentUser!.Username;
         SetPage("Kelola User", vm);
+    }
+
+    [RelayCommand]
+    private void NavigateToAuditLog()
+    {
+        if (!IsAdmin) return;
+        SetPage("Audit Log", services.GetRequiredService<AuditLogViewModel>());
     }
 
     [RelayCommand]

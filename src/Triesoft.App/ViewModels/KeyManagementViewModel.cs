@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Triesoft.App.Services;
+using Triesoft.Core.Audit;
 using Triesoft.Core.KeyManagement;
 
 namespace Triesoft.App.ViewModels;
@@ -8,6 +10,10 @@ namespace Triesoft.App.ViewModels;
 public partial class KeyManagementViewModel : ViewModelBase
 {
     private readonly MonthlyKeyManager _keyManager;
+    private readonly IAuditLog _auditLog;
+    private readonly SessionContext _session;
+
+    private string Actor => _session.CurrentUser?.Username ?? "unknown";
 
     public ObservableCollection<KeyMetadata> Keys { get; } = [];
 
@@ -31,9 +37,11 @@ public partial class KeyManagementViewModel : ViewModelBase
     [ObservableProperty]
     private string _revokeReason = "";
 
-    public KeyManagementViewModel(MonthlyKeyManager keyManager)
+    public KeyManagementViewModel(MonthlyKeyManager keyManager, IAuditLog auditLog, SessionContext session)
     {
         _keyManager = keyManager;
+        _auditLog = auditLog;
+        _session = session;
         Refresh();
     }
 
@@ -59,7 +67,9 @@ public partial class KeyManagementViewModel : ViewModelBase
             var bytes = Convert.FromHexString(NewKeyHex.Trim());
             var validFrom = new DateTimeOffset(DateTime.SpecifyKind(NewValidFrom.Value, DateTimeKind.Utc));
             var validUntil = new DateTimeOffset(DateTime.SpecifyKind(NewValidUntil.Value, DateTimeKind.Utc));
-            _keyManager.ImportMonthlyKey(NewKeyId.Trim(), bytes, validFrom, validUntil);
+            var keyId = NewKeyId.Trim();
+            _keyManager.ImportMonthlyKey(keyId, bytes, validFrom, validUntil);
+            _auditLog.Record(Actor, AuditAction.KeyImported, $"keyId={keyId}, validFrom={validFrom:yyyy-MM-dd}, validUntil={validUntil:yyyy-MM-dd}");
             NewKeyId = "";
             NewKeyHex = "";
             SuccessMessage = "Kunci berhasil diimpor sebagai Active.";
@@ -89,7 +99,9 @@ public partial class KeyManagementViewModel : ViewModelBase
 
         try
         {
-            _keyManager.RevokeKey(SelectedKey.KeyId, RevokeReason.Trim());
+            var reason = RevokeReason.Trim();
+            _keyManager.RevokeKey(SelectedKey.KeyId, reason);
+            _auditLog.Record(Actor, AuditAction.KeyRevoked, $"keyId={SelectedKey.KeyId}, alasan={reason}");
             SuccessMessage = $"Kunci '{SelectedKey.KeyId}' dicabut. Material sudah dihapus permanen.";
             RevokeReason = "";
             Refresh();
@@ -114,6 +126,7 @@ public partial class KeyManagementViewModel : ViewModelBase
         try
         {
             _keyManager.PurgeExpiredKey(SelectedKey.KeyId);
+            _auditLog.Record(Actor, AuditAction.KeyPurged, $"keyId={SelectedKey.KeyId}");
             SuccessMessage = $"Kunci '{SelectedKey.KeyId}' dihapus permanen.";
             Refresh();
         }

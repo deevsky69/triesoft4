@@ -1,11 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Triesoft.App.Services;
+using Triesoft.Core.Audit;
 using Triesoft.Core.Crypto;
 using Triesoft.Core.KeyManagement;
 
 namespace Triesoft.App.ViewModels;
 
-public partial class DecryptViewModel(MonthlyKeyManager keyManager) : ViewModelBase
+public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog auditLog, SessionContext session) : ViewModelBase
 {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DecryptCommand))]
@@ -27,9 +29,10 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager) : ViewModelB
         ClearMessages();
         IsBusy = true;
         Progress = 0;
+        var actor = session.CurrentUser?.Username ?? "unknown";
+        var inputPath = SelectedFilePath!;
         try
         {
-            var inputPath = SelectedFilePath!;
             var reporter = new Progress<double>(p => Progress = p);
 
             var finalPath = await Task.Run(() =>
@@ -51,10 +54,14 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager) : ViewModelB
                 return destinationPath;
             });
 
+            auditLog.Record(actor, AuditAction.FileDecrypted, $"file={Path.GetFileName(inputPath)} -> {Path.GetFileName(finalPath)}");
             SuccessMessage = $"Berhasil didekripsi -> {finalPath}";
         }
         catch (Exception ex)
         {
+            // Dekripsi gagal (termasuk deteksi tamper AEAD) sengaja tetap diaudit -- ini justru
+            // salah satu sinyal paling penting untuk investigasi.
+            auditLog.Record(actor, AuditAction.FileDecryptFailed, $"file={Path.GetFileName(inputPath)}, error={ex.Message}");
             ErrorMessage = ex.Message;
         }
         finally

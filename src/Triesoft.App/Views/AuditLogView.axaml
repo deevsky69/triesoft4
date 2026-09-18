@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:audit="clr-namespace:Triesoft.Core.Audit;assembly=Triesoft.Core"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.AuditLogView"
+             x:DataType="vm:AuditLogViewModel">
+    <StackPanel Spacing="24">
+
+        <Border Classes="card" MaxWidth="640" HorizontalAlignment="Left">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Integritas Log" Classes="h2" />
+                <TextBlock Classes="secondary" TextWrapping="Wrap"
+                           Text="Tiap entri diikat lewat hash rantai ke entri sebelumnya. Kalau ada entri yang diubah, disisipkan, atau dihapus di luar aplikasi ini, verifikasi di bawah akan mendeteksinya." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Verifikasi Integritas" Classes="primary" Command="{Binding VerifyIntegrityCommand}" />
+                    <Button Content="Muat Ulang" Classes="secondary" Command="{Binding ReloadCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
+                           IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Riwayat Aktivitas" Classes="h2" />
+                <ItemsControl ItemsSource="{Binding Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="audit:StoredAuditEntry">
+                            <Grid ColumnDefinitions="170,120,150,*" Margin="0,8" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0" Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss} UTC'}"
+                                           Classes="caption" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Actor}" Classes="body" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding Action}" Classes="secondary" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding Details}" Classes="caption"
+                                           VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

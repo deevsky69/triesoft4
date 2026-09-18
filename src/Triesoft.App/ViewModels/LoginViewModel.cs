@@ -1,10 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Triesoft.Core.Audit;
 using Triesoft.Core.Identity;
 
 namespace Triesoft.App.ViewModels;
 
-public partial class LoginViewModel(AuthService authService) : ViewModelBase
+public partial class LoginViewModel(AuthService authService, IAuditLog auditLog) : ViewModelBase
 {
     [ObservableProperty]
     private string _username = "";
@@ -24,11 +25,14 @@ public partial class LoginViewModel(AuthService authService) : ViewModelBase
         try
         {
             var user = authService.Login(Username, Password);
+            auditLog.Record(user.Username, AuditAction.LoginSucceeded, "");
             Password = "";
             LoginSucceeded?.Invoke(this, user);
         }
         catch (Exception ex)
         {
+            // Actor = username yang DICOBA, bukan user terautentikasi -- belum tentu akun itu ada.
+            auditLog.Record(Username, AuditAction.LoginFailed, ex.Message);
             ErrorMessage = ex.Message;
         }
     }

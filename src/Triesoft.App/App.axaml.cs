@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Triesoft.App.Services;
 using Triesoft.App.ViewModels;
+using Triesoft.Core.Audit;
 using Triesoft.Core.Identity;
 using Triesoft.Core.KeyManagement;
 
@@ -41,6 +42,7 @@ public partial class App : Application
         services.AddSingleton<MonthlyKeyManager>();
         services.AddSingleton<IUserStore>(_ => new FileUserStore(AppPaths.UserStoreDirectory));
         services.AddSingleton<AuthService>();
+        services.AddSingleton<IAuditLog>(_ => new FileAuditLog(AppPaths.AuditLogDirectory));
 
         services.AddTransient<LoginViewModel>();
         services.AddTransient<FirstRunSetupViewModel>();
@@ -49,6 +51,7 @@ public partial class App : Application
         services.AddTransient<DecryptViewModel>();
         services.AddTransient<KeyManagementViewModel>();
         services.AddTransient<UserManagementViewModel>();
+        services.AddTransient<AuditLogViewModel>();
         services.AddSingleton<AppShellViewModel>();
     }
 

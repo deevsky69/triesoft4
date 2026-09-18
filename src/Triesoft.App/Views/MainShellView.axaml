@@ -18,6 +18,9 @@
         <DataTemplate DataType="vm:UserManagementViewModel">
             <views:UserManagementView />
         </DataTemplate>
+        <DataTemplate DataType="vm:AuditLogViewModel">
+            <views:AuditLogView />
+        </DataTemplate>
     </UserControl.DataTemplates>
 
     <Grid ColumnDefinitions="240,*">
@@ -43,6 +46,8 @@
                             Command="{Binding NavigateToKeyManagementCommand}" IsVisible="{Binding IsAdmin}" />
                     <Button Content="Kelola User" Classes="nav" Classes.active="{Binding IsUserManagementPageActive}"
                             Command="{Binding NavigateToUserManagementCommand}" IsVisible="{Binding IsAdmin}" />
+                    <Button Content="Audit Log" Classes="nav" Classes.active="{Binding IsAuditLogPageActive}"
+                            Command="{Binding NavigateToAuditLogCommand}" IsVisible="{Binding IsAdmin}" />
                 </StackPanel>
             </DockPanel>
         </Border>

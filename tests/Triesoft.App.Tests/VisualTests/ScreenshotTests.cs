@@ -3,8 +3,10 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
+using Triesoft.App.Services;
 using Triesoft.App.ViewModels;
 using Triesoft.App.Views;
+using Triesoft.Core.Audit;
 using Triesoft.Core.Identity;
 using Triesoft.Core.KeyManagement;
 using Xunit;
@@ -30,20 +32,22 @@ public class ScreenshotTests
     public void Login_Screenshot()
     {
         var dir = Directory.CreateTempSubdirectory("triesoft4-shot-login-").FullName;
-        var authService = new AuthService(new FileUserStore(dir));
+        var authService = new AuthService(new FileUserStore(Path.Combine(dir, "users")));
         authService.RegisterUser("admin1", "Admin Satu", "password123", UserRole.Admin, "system");
         authService.VerifyUser("admin1");
+        var auditLog = new FileAuditLog(Path.Combine(dir, "audit"));
 
-        Render(new LoginView { DataContext = new LoginViewModel(authService) }, "login.png");
+        Render(new LoginView { DataContext = new LoginViewModel(authService, auditLog) }, "login.png");
     }
 
     [Fact]
     public void Login_FirstRun_Screenshot()
     {
         var dir = Directory.CreateTempSubdirectory("triesoft4-shot-login-firstrun-").FullName;
-        var authService = new AuthService(new FileUserStore(dir));
+        var authService = new AuthService(new FileUserStore(Path.Combine(dir, "users")));
+        var auditLog = new FileAuditLog(Path.Combine(dir, "audit"));
 
-        Render(new LoginView { DataContext = new LoginViewModel(authService) }, "login-first-run.png");
+        Render(new LoginView { DataContext = new LoginViewModel(authService, auditLog) }, "login-first-run.png");
     }
 
     [Fact]
@@ -82,17 +86,38 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void MainShell_AuditLog_Screenshot()
+    {
+        var shell = BuildShell(out var user, out var auditLog);
+        shell.Initialize(user);
+
+        // isi log dengan beberapa entri nyata supaya tampilan tidak kosong
+        auditLog.Record("admin1", AuditAction.LoginSucceeded, "");
+        auditLog.Record("admin1", AuditAction.KeyImported, "keyId=2026-09-POLDA-JATIM, validFrom=2026-09-01, validUntil=2026-09-30");
+        auditLog.Record("op1", AuditAction.FileEncrypted, "file=laporan-intel.pdf, keyId=2026-09-POLDA-JATIM");
+        auditLog.Record("op1", AuditAction.FileDecryptFailed, "file=arsip-lama.ts4, error=tag autentikasi tidak valid");
+
+        shell.NavigateToAuditLogCommand.Execute(null);
+        if (shell.CurrentPage is AuditLogViewModel auditVm)
+            auditVm.VerifyIntegrityCommand.Execute(null);
+
+        Render(new MainShellView { DataContext = shell }, "main-shell-audit-log.png");
+    }
+
+    [Fact]
     public void MainShell_Operator_HidesAdminMenus_Screenshot()
     {
         var userDir = Directory.CreateTempSubdirectory("triesoft4-shot-op-users-").FullName;
         var keyDir = Directory.CreateTempSubdirectory("triesoft4-shot-op-keys-").FullName;
+        var auditDir = Directory.CreateTempSubdirectory("triesoft4-shot-op-audit-").FullName;
 
         var authService = new AuthService(new FileUserStore(userDir));
         var operatorUser = authService.RegisterUser("op1", "Operator Satu", "password123", UserRole.Operator, "admin1");
         authService.VerifyUser("op1");
 
         var keyManager = new MonthlyKeyManager(new FileKeyStore(keyDir, new PassthroughKeyProtector()));
-        var provider = BuildServiceProvider(authService, keyManager);
+        var auditLog = new FileAuditLog(auditDir);
+        var provider = BuildServiceProvider(authService, keyManager, auditLog);
 
         var shell = new MainShellViewModel(provider);
         shell.Initialize(operatorUser);
@@ -100,10 +125,13 @@ public class ScreenshotTests
         Render(new MainShellView { DataContext = shell }, "main-shell-operator.png");
     }
 
-    private static MainShellViewModel BuildShell(out UserAccount user)
+    private static MainShellViewModel BuildShell(out UserAccount user) => BuildShell(out user, out _);
+
+    private static MainShellViewModel BuildShell(out UserAccount user, out FileAuditLog auditLog)
     {
         var userDir = Directory.CreateTempSubdirectory("triesoft4-shot-users-").FullName;
         var keyDir = Directory.CreateTempSubdirectory("triesoft4-shot-keys-").FullName;
+        var auditDir = Directory.CreateTempSubdirectory("triesoft4-shot-audit-").FullName;
 
         var authService = new AuthService(new FileUserStore(userDir));
         user = authService.RegisterUser("admin1", "Admin Satu", "password123", UserRole.Admin, "system");
@@ -116,19 +144,23 @@ public class ScreenshotTests
         // beri satu user Pending lagi supaya tampilan daftar user tidak kosong
         authService.RegisterUser("op1", "Operator Satu", "password123", UserRole.Operator, "admin1");
 
-        var provider = BuildServiceProvider(authService, keyManager);
+        auditLog = new FileAuditLog(auditDir);
+        var provider = BuildServiceProvider(authService, keyManager, auditLog);
         return new MainShellViewModel(provider);
     }
 
-    private static ServiceProvider BuildServiceProvider(AuthService authService, MonthlyKeyManager keyManager)
+    private static ServiceProvider BuildServiceProvider(AuthService authService, MonthlyKeyManager keyManager, FileAuditLog auditLog)
     {
         var services = new ServiceCollection();
         services.AddSingleton(authService);
         services.AddSingleton(keyManager);
+        services.AddSingleton<IAuditLog>(auditLog);
+        services.AddSingleton<SessionContext>();
         services.AddTransient<EncryptViewModel>();
         services.AddTransient<DecryptViewModel>();
         services.AddTransient<KeyManagementViewModel>();
         services.AddTransient<UserManagementViewModel>();
+        services.AddTransient<AuditLogViewModel>();
         return services.BuildServiceProvider();
     }
 

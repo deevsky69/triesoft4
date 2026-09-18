@@ -17,4 +17,5 @@ public static class AppPaths
 
     public static string KeyStoreDirectory => Path.Combine(DataRoot, "Keys");
     public static string UserStoreDirectory => Path.Combine(DataRoot, "Users");
+    public static string AuditLogDirectory => Path.Combine(DataRoot, "Audit");
 }
