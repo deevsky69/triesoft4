@@ -28,6 +28,21 @@ public partial class EncryptView : UserControl
             vm.AddFiles(files.Select(f => f.Path.LocalPath));
     }
 
+    private async void OnPickBundleFolderClick(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null || DataContext is not EncryptViewModel vm) return;
+
+        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Pilih folder untuk menyimpan bundle",
+            AllowMultiple = false,
+        });
+
+        if (folders.Count > 0)
+            vm.BundleOutputFolder = folders[0].Path.LocalPath;
+    }
+
     private async void OnAddFolderClick(object? sender, RoutedEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);

@@ -90,6 +90,25 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void MainShell_EncryptBundle_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        var work = Directory.CreateTempSubdirectory("triesoft4-shot-bundle-").FullName;
+        var files = new[] { "laporan-intel.pdf", "briefing.pptx", "foto-lokasi.jpg" }.Select(n => Path.Combine(work, n)).ToList();
+        foreach (var f in files) File.WriteAllText(f, "isi " + f);
+
+        var vm = (EncryptViewModel)shell.CurrentPage!;
+        vm.BundleMode = true;
+        vm.BundleName = "operasi-melati";
+        vm.AddFiles(files);
+        // Dijalankan dari thread pool: lihat catatan di MainShell_EncryptBatch_Screenshot.
+        Task.Run(() => vm.EncryptCommand.ExecuteAsync(null)).GetAwaiter().GetResult();
+
+        Render(new MainShellView { DataContext = shell }, "main-shell-encrypt-bundle.png", height: 1000);
+    }
+
+    [Fact]
     public void DecryptView_DropActive_Screenshot()
     {
         var shell = BuildShell(out var user);

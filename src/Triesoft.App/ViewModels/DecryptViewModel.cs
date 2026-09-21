@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using Triesoft.App.Services;
 using Triesoft.Core.Audit;
+using Triesoft.Core.Bundle;
 using Triesoft.Core.Crypto;
 using Triesoft.Core.KeyManagement;
 
@@ -42,6 +43,10 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
                 result = EnvelopeCipher.Decrypt(input, output, kek, progress);
             }
 
+            // Sampai di sini SELURUH file sudah lolos autentikasi. Bundle baru dibuka setelah itu, tidak pernah selagi mengalir.
+            if (BundleNames.IsBundleFileName(result.OriginalFileName) && LooksLikeBundle(tempPath))
+                return ExtractBundle(tempPath, directory, inputPath, result.OriginalFileName, producedThisRun);
+
             // Nama asli datang dari header terdekripsi. Hanya komponen nama file yang dipakai, jadi header yang memuat
             // "..\..\x" atau path absolut tidak bisa menulis keluar dari folder file .ts4 ini.
             var safeName = Path.GetFileName(result.OriginalFileName);
@@ -56,13 +61,51 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
         }
         finally
         {
-            // Kalau gagal di tengah (mis. tamper terdeteksi di chunk ke-N), plaintext parsial di file sementara tidak boleh tersisa.
-            if (File.Exists(tempPath))
-            {
-                try { File.Delete(tempPath); }
-                catch (IOException) { }
-                catch (UnauthorizedAccessException) { }
-            }
+            // Kalau gagal di tengah (mis. tamper terdeteksi di chunk ke-N), atau isinya bundle yang sudah diekstrak,
+            // plaintext di file sementara tidak boleh tersisa.
+            DeleteQuietly(tempPath);
         }
+    }
+
+    /// <summary>
+    /// Mengekstrak bundle ke folder staging dulu, baru dipindah ke folder bernama bundle. Kalau bundle ditolak atau gagal
+    /// di tengah, staging dibuang seluruhnya: tidak ada hasil setengah jadi. Folder tujuan yang sudah ada tidak pernah digabung.
+    /// </summary>
+    private static BatchFileResult ExtractBundle(string plaintextPath, string directory, string inputPath, string bundleFileName, ISet<string> producedThisRun)
+    {
+        var target = UniqueDirectory(directory, BundleNames.FolderNameFor(bundleFileName), producedThisRun);
+        var staging = Path.Combine(directory, Path.GetRandomFileName());
+        Directory.CreateDirectory(staging);
+        try
+        {
+            IReadOnlyList<string> names;
+            using (var plain = File.OpenRead(plaintextPath))
+                names = BundleExtractor.Extract(plain, staging);
+
+            Directory.Move(staging, target);
+            return new BatchFileResult(target,
+                $"file={Path.GetFileName(inputPath)} -> folder {Path.GetFileName(target)} ({names.Count} file: {string.Join(" | ", names.Take(50))})");
+        }
+        catch
+        {
+            try { Directory.Delete(staging, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            throw;
+        }
+    }
+
+    private static bool LooksLikeBundle(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return BundleExtractor.LooksLikeBundle(stream);
+    }
+
+    private static void DeleteQuietly(string path)
+    {
+        if (!File.Exists(path)) return;
+        try { File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 }

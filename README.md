@@ -6,7 +6,7 @@ Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, ga
 
 ## Apa yang bisa dilakukan aplikasi ini?
 
-- **Enkripsi file (satu atau banyak sekaligus)**: tambahkan file atau satu folder ke daftar, klik *Enkripsi Semua*. Tiap file menjadi file `.ts4` sendiri.
+- **Enkripsi file (satu atau banyak sekaligus)**: tambahkan file atau satu folder ke daftar, klik *Enkripsi Semua*. Tiap file menjadi file `.ts4` sendiri. Atau centang **bundle** untuk menggabungkan semuanya menjadi **satu** file `.ts4`.
 - **Dekripsi file (satu atau banyak sekaligus)**: tambahkan file `.ts4` atau satu folder, klik *Dekripsi Semua*. Tiap file kembali dengan nama aslinya.
 - **Kelola kunci** (khusus Admin): impor kunci bulanan, cabut kunci yang dicurigai bocor, hapus kunci lama.
 - **Distribusi kunci** (khusus Admin): Mabes menerbitkan kunci bulanan sebagai paket terenkripsi per Polda (file `.ts4kp`), Polda mengimpornya. Lihat "Distribusi kunci Mabes ke Polda" di bawah.
@@ -85,6 +85,12 @@ dotnet run --project src/Triesoft.App
 6. **Dekripsi file** di menu **Dekripsi File**: tambahkan file `.ts4` dengan cara yang sama lalu *Dekripsi Semua*. Aplikasi otomatis mencari kunci yang cocok untuk tiap file.
 
 Selain lewat tombol, file dan folder bisa **diseret dari File Explorer** ke kartu Enkripsi atau Dekripsi (kartu berubah biru saat siap menerima). Di Dekripsi, item yang bukan `.ts4` dilewati dan dilaporkan.
+
+**Bundle (banyak file jadi satu `.ts4`):** centang *Gabungkan semua file menjadi satu file .ts4*, isi *Nama bundle*, pilih folder tujuan (bawaannya folder file pertama), lalu klik *Buat Bundle*. Hasilnya satu file `nama-bundle.ts4` (kalau namanya sudah ada, dibuat `nama-bundle (2).ts4`, tidak pernah menimpa). Saat didekripsi lewat menu Dekripsi File, bundle dikenali otomatis dan semua isinya keluar di **folder baru** bernama sama di sebelah file `.ts4`.
+- **Bundle bersifat semua-atau-tidak-sama-sekali:** kalau ada satu file yang tidak bisa dibaca, bundle tidak dibuat dan daftar menunjukkan file mana yang bermasalah. Ini disengaja supaya tidak ada bundle yang diam-diam kehilangan berkas.
+- File dengan nama yang sama dari folder berbeda otomatis diberi nama `nama (2).ext` di dalam bundle. Subfolder belum didukung (tambah folder hanya mengambil file di tingkat teratas).
+- Isi bundle dicatat di audit log (nama file, jumlah, dan kunci yang dipakai).
+- Keamanan saat membuka: isi bundle baru diekstrak setelah seluruh file lolos autentikasi, nama entri yang berbahaya (`..\`, path absolut, `CON`, dll) ditolak, dan kalau ada masalah tidak ada folder atau file setengah jadi yang tersisa.
 
 **Cara kerja daftar file:** tiap baris punya status (Menunggu, Diproses, Berhasil, Gagal, Dibatalkan) dan alasan kalau gagal. Satu file gagal tidak menghentikan yang lain. Tombol *Batal* berhenti setelah file yang sedang berjalan selesai. Menekan tombol proses lagi hanya mengulang file yang belum berhasil. Kalau dua file menghasilkan nama yang sama di satu folder saat dekripsi, yang kedua diberi nama `nama (2).ext` supaya tidak saling menimpa. Tiap file dicatat sendiri di audit log, termasuk yang gagal.
 

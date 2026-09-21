@@ -21,10 +21,10 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 2 | Key management (penyimpanan dan siklus hidup kunci) | Selesai |
 | 3 | UI + login/auth + RBAC | Selesai |
 | 4 | Audit log tamper-evident | Selesai |
-| 5 | Distribusi kunci Mabes ke Polda | Selesai (belum di-commit; lihat bagian "Distribusi kunci") |
+| 5 | Distribusi kunci Mabes ke Polda | Selesai (lihat bagian "Distribusi kunci") |
 | 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
 
-Tes: 113 di `Triesoft.Core.Tests`, 48 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
+Tes: 143 di `Triesoft.Core.Tests`, 64 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -86,6 +86,15 @@ Tes: 113 di `Triesoft.Core.Tests`, 48 di `Triesoft.App.Tests`, semua hijau di Wi
 - Perbaikan yang ikut masuk: (1) dekripsi memakai file sementara dan **menghapus plaintext parsial** kalau gagal di tengah (sebelumnya tertinggal saat tamper terdeteksi); (2) enkripsi menghapus `.ts4` setengah jadi, tapi hanya kalau memang dibuat oleh proses itu; (3) **nama file asli dari header dipersempit ke nama file saja**, jadi header berisi `..\x` atau path absolut tidak bisa menulis keluar dari folder; (4) dua hasil dengan nama sama dalam satu proses tidak saling menimpa (`nama (2).ext`). File yang sudah ada sebelum proses tetap ditimpa seperti perilaku lama.
 - **Drag and drop** dari File Explorer ke kartu enkripsi/dekripsi (`Views/FileDropTarget`, API `DragEventArgs.DataTransfer.TryGetFiles()` milik Avalonia 12). File dan folder diterima; logika penyaringan ada di `BatchFileViewModelBase.AddDropped` (teruji): folder ditambahkan isinya tanpa subfolder, dekripsi hanya menerima `.ts4`, item yang dilewati dilaporkan di pesan. Drop ditolak selama proses berjalan. Kartu disorot lewat class `drop-active`. **Event drop-nya sendiri belum pernah diuji dengan seret sungguhan** (headless tidak mensimulasikan drag dari OS); hanya logika VM dan gaya sorotan yang teruji.
 - Belum ada: subfolder rekursif dan penanganan kunci aktif yang berganti di tengah batch (tiap file memakai kunci yang aktif saat file itu diproses).
+
+**Bundle: banyak file menjadi SATU `.ts4` (`Triesoft.Core/Bundle`, mode di `EncryptViewModel`)**
+- **Format `.ts4` tidak berubah.** Bundle adalah aliran byte tersendiri yang dienkripsi lewat `EnvelopeCipher` seperti file biasa: `"TS4B" 0x01`, lalu per entri `0x01 [u16 panjangNama][nama UTF-8][u64 ukuran][isi]`, ditutup `0x00 [u32 jumlahEntri]` (detail di `BundleFormat`). Yang menandai isi sebagai bundle adalah **nama asli** `<nama>.ts4bundle` di header (terenkripsi dan terautentikasi). Versi lama yang mendekripsi bundle akan menghasilkan satu file `*.ts4bundle` berisi aliran mentah.
+- **Enkripsi streaming:** `BundleReadStream` membangkitkan aliran langsung dari file sumber (tanpa arsip sementara di disk, tanpa memuat ke memori) dan diberikan sebagai input `EnvelopeCipher.Encrypt`. Uji sekali pakai: dua file 350 MB total, enkripsi 3,8 dtk, ekstraksi 1 dtk, hash cocok, memori puncak naik ~22 MB. `CanSeek` sengaja true hanya supaya progres bisa dihitung (`Length`/`Position`); Seek sebenarnya melempar exception.
+- **Dekripsi:** selalu ke file sementara dulu (seperti file biasa). Kalau nama asli berakhiran `.ts4bundle` **dan** isinya diawali `TS4B`, baru diekstrak (`BundleExtractor`) ke folder staging lalu dipindah ke folder bernama bundle (`nama`, `nama (2)`, ... tidak pernah menggabung ke folder yang ada). Jadi ekstraksi hanya terjadi **setelah seluruh file lolos autentikasi**. Gagal di tengah membuang staging seluruhnya. Kalau bernama `.ts4bundle` tapi bukan bundle, dikembalikan sebagai file biasa (data tidak hilang).
+- **Bundle atomik:** satu file tidak terbaca berarti tidak ada bundle sama sekali (pemeriksaan awal, dan `IOException` kalau file menyusut saat dibaca). Bundle ditulis ke `*.partial` lalu dipindah; nama tidak pernah menimpa (`nama (2).ts4`). Pembatalan berlaku sampai tengah bundle.
+- **Keamanan ekstraksi** (`BundleNames.ValidateEntryName`, aturan sama di semua OS): hanya nama file datar, tanpa pemisah path, `..`, `:` (ADS), karakter terlarang Windows, akhiran titik/spasi, dan nama perangkat Windows (CON, NUL, COM1, ...). Duplikat (tidak peka huruf besar/kecil), entri lebih dari 100.000, ukuran lebih besar dari sisa data, jumlah tidak cocok, data tambahan, dan UTF-8 tidak valid ditolak. File dibuat dengan `CreateNew` (tidak pernah menimpa).
+- Enkripsi file tunggal menolak input bernama `*.ts4bundle` (nama itu dicadangkan). Audit bundle memuat `bundle=`, `files=`, `keyId=`, dan daftar nama (maks 50).
+- **Belum ada:** subfolder di dalam bundle (format v1 hanya nama datar, versi 2 perlu untuk struktur folder), dan progres per file di dalam bundle. Cabang "file menyusut saat dibaca" hanya teruji di OS yang mengizinkannya; di Windows `FileShare.Read` sudah mencegahnya.
 - Jebakan tes: memanggil `ExecuteAsync(...).GetAwaiter().GetResult()` dari thread UI headless membuat **deadlock**. Jalankan lewat `Task.Run(...)` (lihat `MainShell_EncryptBatch_Screenshot`).
 
 ## 4. Jebakan teknis yang sudah ditemui

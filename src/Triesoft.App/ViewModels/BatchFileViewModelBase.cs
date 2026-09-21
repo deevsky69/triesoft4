@@ -147,14 +147,32 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
 
+    /// <summary>Dipanggil setiap isi daftar berubah, untuk turunan yang punya properti turunan dari daftar.</summary>
+    protected virtual void OnFilesChanged() { }
+
+    protected string Actor => session.CurrentUser?.Username ?? "unknown";
+
+    protected void Record(AuditAction action, string details) => auditLog.Record(Actor, action, details);
+
+    /// <summary>Memulai satu proses yang bisa dibatalkan lewat tombol Batal. Pasangkan dengan <see cref="EndRun"/> di finally.</summary>
+    protected CancellationTokenSource BeginRun()
+    {
+        var cts = new CancellationTokenSource();
+        _cts = cts;
+        return cts;
+    }
+
+    protected void EndRun() => _cts = null;
+
     private void NotifyListChanged()
     {
         OnPropertyChanged(nameof(HasFiles));
         OnPropertyChanged(nameof(FileCountText));
+        OnFilesChanged();
         NotifyRunCanExecuteChanged();
     }
 
-    private void SetBusy(bool busy)
+    protected void SetBusy(bool busy)
     {
         IsBusy = busy;
         foreach (var f in Files) f.IsRemovable = !busy;
@@ -182,10 +200,8 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
             f.Message = "";
         }
 
-        var actor = session.CurrentUser?.Username ?? "unknown";
         var produced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var cts = new CancellationTokenSource();
-        _cts = cts;
+        using var cts = BeginRun();
         var done = 0;
 
         try
@@ -205,7 +221,7 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
                 try
                 {
                     var result = await Task.Run(() => ProcessFile(item.Path, produced, reporter));
-                    auditLog.Record(actor, SuccessAction, result.AuditDetails);
+                    Record(SuccessAction, result.AuditDetails);
                     item.Message = result.OutputPath;
                     item.Status = BatchStatus.Succeeded;
                 }
@@ -213,7 +229,7 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
                 {
                     // Kegagalan (termasuk deteksi tamper AEAD) sengaja tetap diaudit -- salah satu sinyal terpenting untuk investigasi.
                     var reason = Describe(ex);
-                    auditLog.Record(actor, FailureAction, $"file={item.FileName}, error={reason}");
+                    Record(FailureAction, $"file={item.FileName}, error={reason}");
                     item.Message = reason;
                     item.Status = BatchStatus.Failed;
                 }
@@ -224,7 +240,7 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
         }
         finally
         {
-            _cts = null;
+            EndRun();
             SetBusy(false);
         }
 
@@ -261,12 +277,21 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     }
 
     /// <summary>Pesan kegagalan berbahasa Indonesia untuk kasus berkas yang umum; sisanya memakai pesan aslinya.</summary>
-    private static string Describe(Exception ex) => ex switch
+    protected static string Describe(Exception ex) => ex switch
     {
         FileNotFoundException or DirectoryNotFoundException => "File tidak ditemukan.",
         UnauthorizedAccessException => "Akses ke file atau folder ditolak.",
         _ => ex.Message,
     };
+
+    /// <summary>Folder baru yang belum ada di disk dan belum dipakai di proses ini: "nama", "nama (2)", "nama (3)", ... Tidak pernah menggabung ke folder yang sudah ada.</summary>
+    protected static string UniqueDirectory(string parent, string name, ISet<string> producedThisRun)
+    {
+        var candidate = Path.Combine(parent, name);
+        for (var i = 2; Directory.Exists(candidate) || File.Exists(candidate) || !producedThisRun.Add(candidate); i++)
+            candidate = Path.Combine(parent, $"{name} ({i})");
+        return candidate;
+    }
 
     /// <summary>Nama output yang belum dipakai di proses ini: "nama.ext" lalu "nama (2).ext", "nama (3).ext", ...</summary>
     protected static string UniquePath(string directory, string fileName, ISet<string> producedThisRun)
