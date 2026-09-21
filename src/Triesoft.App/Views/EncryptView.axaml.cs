@@ -10,6 +10,7 @@ public partial class EncryptView : UserControl
     public EncryptView()
     {
         InitializeComponent();
+        FileDropTarget.Attach(this, this.FindControl<Border>("DropZone")!);
     }
 
     private async void OnAddFilesClick(object? sender, RoutedEventArgs e)

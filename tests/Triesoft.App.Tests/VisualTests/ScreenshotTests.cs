@@ -90,6 +90,20 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void DecryptView_DropActive_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        shell.NavigateToDecryptCommand.Execute(null);
+        var view = new DecryptView { DataContext = shell.CurrentPage };
+
+        // meniru keadaan saat file sedang diseret di atas kartu (class ditambah oleh FileDropTarget)
+        view.FindControl<Border>("DropZone")!.Classes.Add(FileDropTarget.ActiveClass);
+
+        Render(view, "decrypt-drop-active.png", height: 420);
+    }
+
+    [Fact]
     public void MainShell_KeyManagement_Screenshot()
     {
         var shell = BuildShell(out var user);

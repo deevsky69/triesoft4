@@ -83,6 +83,62 @@ public class BatchFileViewModelTests : IDisposable
         Assert.Equal("c.ts4", dec.Files.Single().FileName);
     }
 
+    // --- drag and drop ------------------------------------------------------------------------------
+
+    [Fact]
+    public void AddDropped_Encrypt_TakesFilesAndFolderContents_AndReportsUnknownItems()
+    {
+        var single = Write("drop/satu.txt", "1");
+        Write("folder/a.pdf", "a");
+        Write("folder/b.docx", "b");
+        Write("folder/sudah.ts4", "x"); // dilewati saat lewat folder, sama seperti "Tambah Folder"
+        var vm = NewEncrypt();
+
+        var added = vm.AddDropped([single, Path.Combine(_workDir, "folder"), Path.Combine(_workDir, "tidak-ada.txt")]);
+
+        Assert.Equal(3, added);
+        Assert.Equal(["a.pdf", "b.docx", "satu.txt"], vm.Files.Select(f => f.FileName).Order());
+        Assert.Contains("1 item dilewati", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void AddDropped_Encrypt_AcceptsIndividuallyDroppedTs4()
+    {
+        // konsisten dengan pemilih file: .ts4 yang dipilih satu per satu tetap boleh (folder yang melewatinya)
+        var vm = NewEncrypt();
+        Assert.Equal(1, vm.AddDropped([Write("x.ts4", "x")]));
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void AddDropped_Decrypt_OnlyTs4_OthersSkippedWithMessage()
+    {
+        Write("m/a.ts4", "a");
+        Write("m/catatan.txt", "bukan terenkripsi");
+        Write("m/b.TS4", "b");
+        var vm = NewDecrypt();
+
+        var added = vm.AddDropped([
+            Path.Combine(_workDir, "m", "a.ts4"),
+            Path.Combine(_workDir, "m", "catatan.txt"),
+            Path.Combine(_workDir, "m"),
+        ]);
+
+        Assert.Equal(2, added); // a.ts4 (langsung, lalu duplikat dari folder dilewati) dan b.TS4 dari folder
+        Assert.Equal(["a.ts4", "b.TS4"], vm.Files.Select(f => f.FileName).Order());
+        Assert.Contains("1 item dilewati karena bukan file .ts4", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void AddDropped_EmptyOrOnlyUnknown_ChangesNothing()
+    {
+        var vm = NewDecrypt();
+
+        Assert.Equal(0, vm.AddDropped([Path.Combine(_workDir, "hantu.ts4")]));
+        Assert.Empty(vm.Files);
+        Assert.Equal(0, vm.AddDropped([]));
+    }
+
     // --- enkripsi massal ----------------------------------------------------------------------------
 
     [Fact]

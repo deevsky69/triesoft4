@@ -5,7 +5,7 @@
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.EncryptView"
              x:DataType="vm:EncryptViewModel">
-    <Border Classes="card" MaxWidth="760" HorizontalAlignment="Left">
+    <Border x:Name="DropZone" Classes="card" MaxWidth="760" HorizontalAlignment="Left">
         <StackPanel Spacing="16">
             <TextBlock Classes="body" TextWrapping="Wrap"
                        Text="Tambahkan file yang akan dienkripsi (PDF, Word, PPT, gambar, dll). Tiap file menjadi file .ts4 sendiri di folder yang sama." />
@@ -16,6 +16,8 @@
                 <Button Content="Kosongkan" Classes="secondary" Command="{Binding ClearFilesCommand}"
                         IsVisible="{Binding HasFiles}" IsEnabled="{Binding !IsBusy}" />
             </StackPanel>
+
+            <TextBlock Classes="caption" Text="Atau seret file dan folder dari File Explorer ke sini." />
 
             <TextBlock Text="{Binding FileCountText}" Classes="caption" />
 

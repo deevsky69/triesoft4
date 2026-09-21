@@ -16,6 +16,11 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
     protected override bool IncludeFromFolder(string path) =>
         path.EndsWith(".ts4", StringComparison.OrdinalIgnoreCase);
 
+    // Sama dengan filter pemilih file: hanya .ts4 yang bisa didekripsi.
+    protected override bool AcceptsFile(string path) => IncludeFromFolder(path);
+
+    protected override string AcceptedDescription => "file .ts4";
+
     protected override void NotifyRunCanExecuteChanged() => DecryptCommand.NotifyCanExecuteChanged();
 
     [RelayCommand(CanExecute = nameof(CanRun))]

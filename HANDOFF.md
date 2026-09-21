@@ -24,7 +24,7 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 5 | Distribusi kunci Mabes ke Polda | Selesai (belum di-commit; lihat bagian "Distribusi kunci") |
 | 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
 
-Tes: 113 di `Triesoft.Core.Tests`, 43 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
+Tes: 113 di `Triesoft.Core.Tests`, 48 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -84,7 +84,8 @@ Tes: 113 di `Triesoft.Core.Tests`, 43 di `Triesoft.App.Tests`, semua hijau di Wi
 - Permintaan pemilik proyek: banyak file sekaligus dengan tampilan daftar. Diartikan sebagai **batch per file** (tiap file tetap satu `.ts4` sendiri, format file tidak berubah), bukan satu arsip gabungan. Kalau yang dimaksud "bundle" adalah satu file `.ts4` berisi banyak file, itu butuh format arsip baru dan belum dikerjakan.
 - `EncryptViewModel` dan `DecryptViewModel` menurunkan basis yang sama: daftar `BatchFileItem` (status per file), diproses berurutan, satu gagal tidak menghentikan yang lain, `Batal` berhenti setelah file berjalan selesai, menjalankan ulang hanya memproses yang belum berhasil. Tiap file diaudit sendiri (sukses dan gagal). Kunci dimuat per file.
 - Perbaikan yang ikut masuk: (1) dekripsi memakai file sementara dan **menghapus plaintext parsial** kalau gagal di tengah (sebelumnya tertinggal saat tamper terdeteksi); (2) enkripsi menghapus `.ts4` setengah jadi, tapi hanya kalau memang dibuat oleh proses itu; (3) **nama file asli dari header dipersempit ke nama file saja**, jadi header berisi `..\x` atau path absolut tidak bisa menulis keluar dari folder; (4) dua hasil dengan nama sama dalam satu proses tidak saling menimpa (`nama (2).ext`). File yang sudah ada sebelum proses tetap ditimpa seperti perilaku lama.
-- Belum ada: drag and drop ke daftar, subfolder rekursif, dan penanganan kunci aktif yang berganti di tengah batch (tiap file memakai kunci yang aktif saat file itu diproses).
+- **Drag and drop** dari File Explorer ke kartu enkripsi/dekripsi (`Views/FileDropTarget`, API `DragEventArgs.DataTransfer.TryGetFiles()` milik Avalonia 12). File dan folder diterima; logika penyaringan ada di `BatchFileViewModelBase.AddDropped` (teruji): folder ditambahkan isinya tanpa subfolder, dekripsi hanya menerima `.ts4`, item yang dilewati dilaporkan di pesan. Drop ditolak selama proses berjalan. Kartu disorot lewat class `drop-active`. **Event drop-nya sendiri belum pernah diuji dengan seret sungguhan** (headless tidak mensimulasikan drag dari OS); hanya logika VM dan gaya sorotan yang teruji.
+- Belum ada: subfolder rekursif dan penanganan kunci aktif yang berganti di tengah batch (tiap file memakai kunci yang aktif saat file itu diproses).
 - Jebakan tes: memanggil `ExecuteAsync(...).GetAwaiter().GetResult()` dari thread UI headless membuat **deadlock**. Jalankan lewat `Task.Run(...)` (lihat `MainShell_EncryptBatch_Screenshot`).
 
 ## 4. Jebakan teknis yang sudah ditemui

@@ -57,6 +57,12 @@
     <Setter Property="BorderThickness" Value="1" />
   </Style>
 
+  <!-- Kartu yang menerima drag and drop file: disorot selama ada file diseret di atasnya. -->
+  <Style Selector="Border.card.drop-active">
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+    <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+  </Style>
+
   <Style Selector="TextBlock.error-text">
     <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
     <Setter Property="FontSize" Value="13" />

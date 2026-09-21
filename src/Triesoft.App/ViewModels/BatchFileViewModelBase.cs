@@ -42,6 +42,54 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     /// <summary>Apakah file ini ikut saat "Tambah Folder". Bawaan: semua file.</summary>
     protected virtual bool IncludeFromFolder(string path) => true;
 
+    /// <summary>Apakah file yang dijatuhkan (drag and drop) atau dipilih langsung boleh masuk daftar. Bawaan: semua file.</summary>
+    protected virtual bool AcceptsFile(string path) => true;
+
+    /// <summary>Uraian jenis file yang diterima, untuk pesan kalau ada yang dilewati (mis. "file .ts4").</summary>
+    protected virtual string AcceptedDescription => "file";
+
+    /// <summary>
+    /// Drag and drop dari File Explorer: file diterima kalau <see cref="AcceptsFile"/> setuju, folder ditambahkan isinya
+    /// (tanpa subfolder, sama seperti "Tambah Folder"). Yang tidak diterima dilewati dan dilaporkan, bukan diam-diam dibuang.
+    /// Mengembalikan jumlah yang ditambahkan.
+    /// </summary>
+    public int AddDropped(IEnumerable<string> paths)
+    {
+        if (IsBusy) return 0;
+        ClearMessages();
+
+        var accepted = new List<string>();
+        var skipped = 0;
+        foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            if (Directory.Exists(path))
+            {
+                try
+                {
+                    var inside = Directory.EnumerateFiles(path).Where(IncludeFromFolder).Order(StringComparer.OrdinalIgnoreCase).ToList();
+                    accepted.AddRange(inside);
+                }
+                catch (Exception ex)
+                {
+                    ErrorMessage = ex.Message;
+                }
+            }
+            else if (File.Exists(path) && AcceptsFile(path))
+            {
+                accepted.Add(path);
+            }
+            else
+            {
+                skipped++;
+            }
+        }
+
+        var added = AddFiles(accepted);
+        if (skipped > 0)
+            ErrorMessage = $"{skipped} item dilewati karena bukan {AcceptedDescription}.";
+        return added;
+    }
+
     /// <summary>Dipanggil saat daftar atau status sibuk berubah, supaya turunan memperbarui CanExecute perintah jalannya.</summary>
     protected abstract void NotifyRunCanExecuteChanged();
 

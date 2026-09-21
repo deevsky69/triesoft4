@@ -19,6 +19,7 @@
   <Color x:Key="Color.TextOnSidebarMuted">#93A2BC</Color>
   <Color x:Key="Color.Accent">#2E5BFF</Color>
   <Color x:Key="Color.AccentHover">#274ED1</Color>
+  <Color x:Key="Color.AccentSoft">#EEF2FF</Color>
   <Color x:Key="Color.Danger">#B3261E</Color>
   <Color x:Key="Color.DangerHover">#8C1D17</Color>
   <Color x:Key="Color.Success">#1E7F4B</Color>
@@ -36,6 +37,7 @@
   <SolidColorBrush x:Key="Brush.TextOnSidebarMuted" Color="{StaticResource Color.TextOnSidebarMuted}" />
   <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
   <SolidColorBrush x:Key="Brush.AccentHover" Color="{StaticResource Color.AccentHover}" />
+  <SolidColorBrush x:Key="Brush.AccentSoft" Color="{StaticResource Color.AccentSoft}" />
   <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}" />
   <SolidColorBrush x:Key="Brush.DangerHover" Color="{StaticResource Color.DangerHover}" />
   <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />

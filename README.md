@@ -84,6 +84,8 @@ dotnet run --project src/Triesoft.App
 5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu, tanpa subfolder), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
 6. **Dekripsi file** di menu **Dekripsi File**: tambahkan file `.ts4` dengan cara yang sama lalu *Dekripsi Semua*. Aplikasi otomatis mencari kunci yang cocok untuk tiap file.
 
+Selain lewat tombol, file dan folder bisa **diseret dari File Explorer** ke kartu Enkripsi atau Dekripsi (kartu berubah biru saat siap menerima). Di Dekripsi, item yang bukan `.ts4` dilewati dan dilaporkan.
+
 **Cara kerja daftar file:** tiap baris punya status (Menunggu, Diproses, Berhasil, Gagal, Dibatalkan) dan alasan kalau gagal. Satu file gagal tidak menghentikan yang lain. Tombol *Batal* berhenti setelah file yang sedang berjalan selesai. Menekan tombol proses lagi hanya mengulang file yang belum berhasil. Kalau dua file menghasilkan nama yang sama di satu folder saat dekripsi, yang kedua diberi nama `nama (2).ext` supaya tidak saling menimpa. Tiap file dicatat sendiri di audit log, termasuk yang gagal.
 
 ### Distribusi kunci Mabes ke Polda

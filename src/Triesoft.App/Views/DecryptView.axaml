@@ -5,7 +5,7 @@
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.DecryptView"
              x:DataType="vm:DecryptViewModel">
-    <Border Classes="card" MaxWidth="760" HorizontalAlignment="Left">
+    <Border x:Name="DropZone" Classes="card" MaxWidth="760" HorizontalAlignment="Left">
         <StackPanel Spacing="16">
             <TextBlock Classes="body" TextWrapping="Wrap"
                        Text="Tambahkan file .ts4 yang akan didekripsi. Tiap file kembali ke nama aslinya di folder yang sama, dan kunci yang cocok dicari otomatis." />
@@ -16,6 +16,8 @@
                 <Button Content="Kosongkan" Classes="secondary" Command="{Binding ClearFilesCommand}"
                         IsVisible="{Binding HasFiles}" IsEnabled="{Binding !IsBusy}" />
             </StackPanel>
+
+            <TextBlock Classes="caption" Text="Atau seret file .ts4 dan folder dari File Explorer ke sini." />
 
             <TextBlock Text="{Binding FileCountText}" Classes="caption" />
 
