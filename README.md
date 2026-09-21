@@ -6,8 +6,8 @@ Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, ga
 
 ## Apa yang bisa dilakukan aplikasi ini?
 
-- **Enkripsi file**: pilih file, klik Enkripsi, hasilnya file baru berakhiran `.ts4`.
-- **Dekripsi file**: pilih file `.ts4`, klik Dekripsi, file asli kembali dengan nama aslinya.
+- **Enkripsi file (satu atau banyak sekaligus)**: tambahkan file atau satu folder ke daftar, klik *Enkripsi Semua*. Tiap file menjadi file `.ts4` sendiri.
+- **Dekripsi file (satu atau banyak sekaligus)**: tambahkan file `.ts4` atau satu folder, klik *Dekripsi Semua*. Tiap file kembali dengan nama aslinya.
 - **Kelola kunci** (khusus Admin): impor kunci bulanan, cabut kunci yang dicurigai bocor, hapus kunci lama.
 - **Distribusi kunci** (khusus Admin): Mabes menerbitkan kunci bulanan sebagai paket terenkripsi per Polda (file `.ts4kp`), Polda mengimpornya. Lihat "Distribusi kunci Mabes ke Polda" di bawah.
 - **Kelola user** (khusus Admin): daftarkan user baru, verifikasi, nonaktifkan.
@@ -81,8 +81,10 @@ dotnet run --project src/Triesoft.App
 
    Lalu klik **Impor**. Kunci baru otomatis jadi kunci aktif, dan kunci bulan lalu berubah jadi *Expired* (tidak dipakai untuk enkripsi baru, tapi masih bisa membuka arsip lama).
 4. **Daftarkan user lain** di menu **Kelola User**. User baru berstatus *PendingVerification*. Klik **Verifikasi** supaya ia bisa masuk.
-5. **Enkripsi file** di menu **Enkripsi File**: *Pilih File...* lalu *Enkripsi*. Hasilnya `namafile.ext.ts4` di folder yang sama.
-6. **Dekripsi file** di menu **Dekripsi File**: pilih file `.ts4` lalu *Dekripsi*. Aplikasi otomatis mencari kunci yang cocok.
+5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu, tanpa subfolder), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
+6. **Dekripsi file** di menu **Dekripsi File**: tambahkan file `.ts4` dengan cara yang sama lalu *Dekripsi Semua*. Aplikasi otomatis mencari kunci yang cocok untuk tiap file.
+
+**Cara kerja daftar file:** tiap baris punya status (Menunggu, Diproses, Berhasil, Gagal, Dibatalkan) dan alasan kalau gagal. Satu file gagal tidak menghentikan yang lain. Tombol *Batal* berhenti setelah file yang sedang berjalan selesai. Menekan tombol proses lagi hanya mengulang file yang belum berhasil. Kalau dua file menghasilkan nama yang sama di satu folder saat dekripsi, yang kedua diberi nama `nama (2).ext` supaya tidak saling menimpa. Tiap file dicatat sendiri di audit log, termasuk yang gagal.
 
 ### Distribusi kunci Mabes ke Polda
 

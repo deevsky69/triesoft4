@@ -44,7 +44,7 @@ public class EncryptDecryptViewModelTests : IDisposable
         await File.WriteAllTextAsync(plaintextPath, "isi rahasia untuk diuji");
 
         var vm = NewEncryptViewModel();
-        vm.SetSelectedFile(plaintextPath);
+        vm.AddFiles([plaintextPath]);
         Assert.True(vm.EncryptCommand.CanExecute(null));
 
         await vm.EncryptCommand.ExecuteAsync(null);
@@ -67,14 +67,14 @@ public class EncryptDecryptViewModelTests : IDisposable
         await File.WriteAllTextAsync(plaintextPath, originalContent);
 
         var encryptVm = NewEncryptViewModel();
-        encryptVm.SetSelectedFile(plaintextPath);
+        encryptVm.AddFiles([plaintextPath]);
         await encryptVm.EncryptCommand.ExecuteAsync(null);
 
         var encryptedPath = plaintextPath + ".ts4";
         File.Delete(plaintextPath); // pastikan hasil dekripsi memang dari file terenkripsi, bukan sisa file asli
 
         var decryptVm = NewDecryptViewModel();
-        decryptVm.SetSelectedFile(encryptedPath);
+        decryptVm.AddFiles([encryptedPath]);
         Assert.True(decryptVm.DecryptCommand.CanExecute(null));
 
         await decryptVm.DecryptCommand.ExecuteAsync(null);
@@ -98,13 +98,13 @@ public class EncryptDecryptViewModelTests : IDisposable
         await File.WriteAllTextAsync(plaintextPath, "data");
 
         var encryptVm = NewEncryptViewModel();
-        encryptVm.SetSelectedFile(plaintextPath);
+        encryptVm.AddFiles([plaintextPath]);
         await encryptVm.EncryptCommand.ExecuteAsync(null);
 
         _keyManager.RevokeKey("2026-09-TEST", "diduga bocor");
 
         var decryptVm = NewDecryptViewModel();
-        decryptVm.SetSelectedFile(plaintextPath + ".ts4");
+        decryptVm.AddFiles([plaintextPath + ".ts4"]);
         await decryptVm.DecryptCommand.ExecuteAsync(null);
 
         Assert.NotNull(decryptVm.ErrorMessage);

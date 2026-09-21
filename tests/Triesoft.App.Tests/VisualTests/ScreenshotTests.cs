@@ -69,6 +69,27 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void MainShell_EncryptBatch_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        var work = Directory.CreateTempSubdirectory("triesoft4-shot-batch-").FullName;
+        var files = new[] { "laporan-intel.pdf", "briefing.pptx", "hilang.docx", "foto-lokasi.jpg" }
+            .Select(n => Path.Combine(work, n)).ToList();
+        foreach (var f in files.Where(f => !f.EndsWith("hilang.docx")))
+            File.WriteAllText(f, "isi " + f);
+
+        var vm = (EncryptViewModel)shell.CurrentPage!;
+        vm.AddFiles(files);
+        // Dijalankan dari thread pool: memblokir thread UI headless dengan GetResult() membuat deadlock,
+        // karena kelanjutan await menunggu thread yang sama.
+        Task.Run(() => vm.EncryptCommand.ExecuteAsync(null)).GetAwaiter().GetResult();
+        vm.AddFiles([Path.Combine(work, "baru.xlsx")]); // satu lagi yang masih Menunggu
+
+        Render(new MainShellView { DataContext = shell }, "main-shell-encrypt-batch.png", height: 900);
+    }
+
+    [Fact]
     public void MainShell_KeyManagement_Screenshot()
     {
         var shell = BuildShell(out var user);

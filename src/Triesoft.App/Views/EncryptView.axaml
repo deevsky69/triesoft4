@@ -1,27 +1,48 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.EncryptView"
              x:DataType="vm:EncryptViewModel">
-    <Border Classes="card" MaxWidth="640" HorizontalAlignment="Left">
+    <Border Classes="card" MaxWidth="760" HorizontalAlignment="Left">
         <StackPanel Spacing="16">
-            <TextBlock Text="Pilih file yang akan dienkripsi (PDF, Word, PPT, gambar, dll)." Classes="body" />
+            <TextBlock Classes="body" TextWrapping="Wrap"
+                       Text="Tambahkan file yang akan dienkripsi (PDF, Word, PPT, gambar, dll). Tiap file menjadi file .ts4 sendiri di folder yang sama." />
 
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Grid.Column="0" Text="{Binding SelectedFilePath}" IsReadOnly="True"
-                         PlaceholderText="Belum ada file dipilih" />
-                <Button Grid.Column="1" Content="Pilih File..." Classes="secondary" Click="OnBrowseClick" />
-            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Tambah File..." Classes="secondary" Click="OnAddFilesClick" IsEnabled="{Binding !IsBusy}" />
+                <Button Content="Tambah Folder..." Classes="secondary" Click="OnAddFolderClick" IsEnabled="{Binding !IsBusy}" />
+                <Button Content="Kosongkan" Classes="secondary" Command="{Binding ClearFilesCommand}"
+                        IsVisible="{Binding HasFiles}" IsEnabled="{Binding !IsBusy}" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding FileCountText}" Classes="caption" />
+
+            <Border BorderBrush="{StaticResource Brush.Border}" BorderThickness="1" CornerRadius="6" Padding="12,0"
+                    IsVisible="{Binding HasFiles}">
+                <ScrollViewer MaxHeight="340">
+                    <ItemsControl ItemsSource="{Binding Files}" Margin="0,0,14,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:BatchFileItem">
+                                <views:BatchFileRow />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
 
             <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="1" IsVisible="{Binding IsBusy}" />
 
-            <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
+            <TextBlock Text="{Binding ErrorMessage}" Classes="error-text" TextWrapping="Wrap"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
+            <TextBlock Text="{Binding SuccessMessage}" Classes="success-text" TextWrapping="Wrap"
                        IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
 
-            <Button Content="Enkripsi" Classes="primary" Command="{Binding EncryptCommand}" HorizontalAlignment="Left" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Enkripsi Semua" Classes="primary" Command="{Binding EncryptCommand}" />
+                <Button Content="Batal" Classes="secondary" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+            </StackPanel>
         </StackPanel>
     </Border>
 </UserControl>

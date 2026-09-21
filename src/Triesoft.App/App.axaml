@@ -25,6 +25,7 @@
             </ResourceDictionary.MergedDictionaries>
             <conv:KeyStatusToBrushConverter x:Key="KeyStatusToBrushConverter" />
             <conv:UserStatusToBrushConverter x:Key="UserStatusToBrushConverter" />
+            <conv:BatchStatusToBrushConverter x:Key="BatchStatusToBrushConverter" />
         </ResourceDictionary>
     </Application.Resources>
 

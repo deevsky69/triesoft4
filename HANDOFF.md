@@ -24,7 +24,7 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 5 | Distribusi kunci Mabes ke Polda | Selesai (belum di-commit; lihat bagian "Distribusi kunci") |
 | 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
 
-Tes: 113 di `Triesoft.Core.Tests`, 28 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
+Tes: 113 di `Triesoft.Core.Tests`, 43 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -79,6 +79,13 @@ Tes: 113 di `Triesoft.Core.Tests`, 28 di `Triesoft.App.Tests`, semua hijau di Wi
 - **Batasan yang disengaja:** paket yang sudah terbit tidak bisa ditarik. Kalau kunci privat Polda bocor, cabut juga kunci bulanan terkait di Kelola Kunci (kalau penyerang punya paketnya, ia bisa membuka KEK-nya).
 - **Belum ada:** hybrid ML-KEM. Dialog file (ekspor/impor, pilih folder) belum diuji manual, hanya lewat tes ViewModel.
 - **Jebakan `AuditAction`:** `audit.log` menyimpan aksi sebagai **angka**, sedangkan hash rantai memakai **nama** enum. Nilai numerik enum sekarang ditulis eksplisit dan dikunci oleh `AuditActionStabilityTests`. Jangan menyisipkan atau mengurutkan ulang anggota; tambahkan di akhir. Commit `a49a51b` sempat menyisipkan anggota baru di tengah dan menggeser `FileEncrypted` dan sesudahnya, sehingga entri lama terbaca sebagai aksi lain dan verifikasi rantai akan gagal. Sudah diperbaiki; log asli developer diverifikasi utuh setelahnya. Kalau ada mesin lain yang sempat memakai fitur distribusi kunci dengan `a49a51b`, entri distribusinya di log mesin itu (angka 8-14) akan terbaca salah.
+
+**Enkripsi/dekripsi massal (`Triesoft.App/ViewModels/BatchFileViewModelBase`)**
+- Permintaan pemilik proyek: banyak file sekaligus dengan tampilan daftar. Diartikan sebagai **batch per file** (tiap file tetap satu `.ts4` sendiri, format file tidak berubah), bukan satu arsip gabungan. Kalau yang dimaksud "bundle" adalah satu file `.ts4` berisi banyak file, itu butuh format arsip baru dan belum dikerjakan.
+- `EncryptViewModel` dan `DecryptViewModel` menurunkan basis yang sama: daftar `BatchFileItem` (status per file), diproses berurutan, satu gagal tidak menghentikan yang lain, `Batal` berhenti setelah file berjalan selesai, menjalankan ulang hanya memproses yang belum berhasil. Tiap file diaudit sendiri (sukses dan gagal). Kunci dimuat per file.
+- Perbaikan yang ikut masuk: (1) dekripsi memakai file sementara dan **menghapus plaintext parsial** kalau gagal di tengah (sebelumnya tertinggal saat tamper terdeteksi); (2) enkripsi menghapus `.ts4` setengah jadi, tapi hanya kalau memang dibuat oleh proses itu; (3) **nama file asli dari header dipersempit ke nama file saja**, jadi header berisi `..\x` atau path absolut tidak bisa menulis keluar dari folder; (4) dua hasil dengan nama sama dalam satu proses tidak saling menimpa (`nama (2).ext`). File yang sudah ada sebelum proses tetap ditimpa seperti perilaku lama.
+- Belum ada: drag and drop ke daftar, subfolder rekursif, dan penanganan kunci aktif yang berganti di tengah batch (tiap file memakai kunci yang aktif saat file itu diproses).
+- Jebakan tes: memanggil `ExecuteAsync(...).GetAwaiter().GetResult()` dari thread UI headless membuat **deadlock**. Jalankan lewat `Task.Run(...)` (lihat `MainShell_EncryptBatch_Screenshot`).
 
 ## 4. Jebakan teknis yang sudah ditemui
 
