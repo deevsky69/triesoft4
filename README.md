@@ -1,0 +1,133 @@
+# TRIESOFT 4 (Tribrata Encryption Software)
+
+Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, gambar, dan lainnya) yang dipakai Bidsandi Baintelkam Polri. Ini generasi ke-4 setelah TRIESOFT 3.
+
+> Status: masih dalam pengembangan. Belum boleh dipakai untuk berita rahasia sungguhan sebelum ada audit keamanan dan pengesahan resmi dari BSSN/Bidsandi.
+
+## Apa yang bisa dilakukan aplikasi ini?
+
+- **Enkripsi file**: pilih file, klik Enkripsi, hasilnya file baru berakhiran `.ts4`.
+- **Dekripsi file**: pilih file `.ts4`, klik Dekripsi, file asli kembali dengan nama aslinya.
+- **Kelola kunci** (khusus Admin): impor kunci bulanan, cabut kunci yang dicurigai bocor, hapus kunci lama.
+- **Kelola user** (khusus Admin): daftarkan user baru, verifikasi, nonaktifkan.
+- **Audit log** (khusus Admin): catatan semua aktivitas penting. Catatannya dirantai dengan hash, jadi kalau ada yang diubah atau dihapus diam-diam, tombol "Verifikasi Integritas" akan mendeteksinya.
+
+### Ada dua peran
+
+| Peran | Boleh apa |
+|---|---|
+| **Admin** | Enkripsi/dekripsi, kelola kunci, kelola user, lihat audit log |
+| **Operator** | Enkripsi dan dekripsi saja |
+
+## Kenapa lebih aman dari TRIESOFT 3?
+
+- Memakai **AES-256-GCM**, algoritma modern yang sekaligus menjaga kerahasiaan **dan** mendeteksi kalau file diubah orang.
+- Setiap file punya **kunci acak sendiri**. Kunci bulanan hanya dipakai untuk "membungkus" kunci file itu. Jadi kalau satu file bocor, file lain di bulan yang sama tetap aman.
+- **Nama file asli ikut dienkripsi**, tidak hanya isinya.
+- File yang dipotong, ditambah, atau diubah 1 byte pun akan **ditolak** saat dekripsi.
+- Kunci yang tersimpan di disk dilindungi **Windows DPAPI**.
+- Login dilindungi hash password PBKDF2 dan akun terkunci 15 menit setelah 5 kali salah password.
+
+## Yang perlu disiapkan
+
+- **Windows 10/11** (target utama). Untuk mencoba saja, macOS dan Linux juga bisa (lihat catatan di bawah).
+- **.NET 10 SDK**. Unduh di https://dotnet.microsoft.com/download
+- **Git**. Unduh di https://git-scm.com
+
+Cek .NET sudah terpasang dengan membuka terminal (PowerShell) lalu ketik:
+
+```
+dotnet --version
+```
+
+Kalau muncul angka versi `10.x.x`, berarti siap.
+
+## Cara mengunduh dan menguji
+
+```
+git clone https://github.com/deevsky69/triesoft4.git
+cd triesoft4
+dotnet test
+```
+
+Kalau semua tes berwarna hijau (`Passed`), berarti kodenya sehat di komputer kamu. Di Windows, tes `DpapiKeyProtectorTests` ikut berjalan sungguhan (di macOS/Linux tes itu dilewati).
+
+## Cara menjalankan aplikasi
+
+**1. (Disarankan) tentukan folder penyimpanan data.**
+Secara bawaan aplikasi menyimpan data di `C:\ProgramData\Triesoft4`, dan folder itu bisa butuh hak Administrator. Supaya mudah, arahkan ke folder yang bebas ditulis. Di PowerShell:
+
+```
+$env:TRIESOFT4_DATA_DIR = "C:\Triesoft4Data"
+```
+
+Pengaturan ini hanya berlaku di jendela PowerShell yang sama. Jalankan ulang setiap membuka jendela baru.
+
+**2. Jalankan:**
+
+```
+dotnet run --project src/Triesoft.App
+```
+
+## Pemakaian pertama kali
+
+1. **Setup awal.** Karena belum ada akun, aplikasi meminta kamu membuat **akun Admin pertama**. Isi username, nama lengkap, dan password, lalu klik *Buat Akun Admin*.
+2. **Masuk** dengan akun itu.
+3. **Impor kunci bulanan.** Buka menu **Kelola Kunci**, isi:
+   - *Key ID*: nama kunci, misalnya `2026-09-POLDA-JATIM`
+   - *Kunci*: 64 karakter heksadesimal (angka 0-9 dan huruf a-f) dari Bidsandi Mabes
+   - *Berlaku dari/sampai*: masa berlaku kunci
+
+   Lalu klik **Impor**. Kunci baru otomatis jadi kunci aktif, dan kunci bulan lalu berubah jadi *Expired* (tidak dipakai untuk enkripsi baru, tapi masih bisa membuka arsip lama).
+4. **Daftarkan user lain** di menu **Kelola User**. User baru berstatus *PendingVerification*. Klik **Verifikasi** supaya ia bisa masuk.
+5. **Enkripsi file** di menu **Enkripsi File**: *Pilih File...* lalu *Enkripsi*. Hasilnya `namafile.ext.ts4` di folder yang sama.
+6. **Dekripsi file** di menu **Dekripsi File**: pilih file `.ts4` lalu *Dekripsi*. Aplikasi otomatis mencari kunci yang cocok.
+
+### Arti status kunci
+
+| Status | Artinya |
+|---|---|
+| **Active** (hijau) | Kunci bulan ini. Dipakai untuk enkripsi baru |
+| **Expired** (abu-abu) | Kunci lama. Hanya untuk membuka arsip lama |
+| **Revoked** (merah) | Dicabut karena dicurigai bocor. Materi kunci **dihapus permanen** |
+| **Purged** (abu-abu) | Kunci lama yang sudah dihapus permanen dengan cara normal |
+
+> Hati-hati: kunci yang sudah **dicabut** atau **dihapus permanen** tidak bisa dipulihkan. File yang dienkripsi dengan kunci itu **tidak akan bisa dibuka lagi**.
+
+## Catatan penting soal keamanan
+
+- **Di Windows**, kunci disimpan terlindungi memakai DPAPI. Ini pengaturan yang benar untuk penggunaan sesungguhnya.
+- **Di macOS/Linux**, DPAPI tidak ada, sehingga aplikasi memakai penyimpanan **tanpa perlindungan** dan menampilkan peringatan. Itu hanya untuk mencoba dan mengembangkan. **Jangan** dipakai untuk data rahasia.
+- Jangan simpan kunci bulanan di email, chat, atau catatan biasa.
+- Aplikasi ini belum diuji oleh pihak ketiga. Untuk pemakaian resmi, ikuti aturan BSSN (Peraturan BSSN No. 11 Tahun 2024) soal sertifikasi modul kriptografi.
+
+## Untuk pengembang
+
+### Struktur folder
+
+```
+src/
+  Triesoft.Core/    Logika inti: enkripsi, kunci, user, audit log
+  Triesoft.App/     Aplikasi desktop (Avalonia UI)
+  Triesoft.Cli/     Alat baris perintah untuk uji manual (bukan produk akhir)
+tests/
+  Triesoft.Core.Tests/   Tes untuk Triesoft.Core
+  Triesoft.App.Tests/    Tes untuk tampilan dan alur di aplikasi
+```
+
+### Tes tampilan otomatis
+
+`Triesoft.App.Tests` punya tes yang merender tiap layar menjadi gambar PNG tanpa membuka jendela. Gambarnya disimpan di folder `triesoft4-screenshots` di folder sementara sistem, dan bisa dibuka untuk memeriksa tampilan.
+
+### Contoh pemakaian CLI
+
+```
+dotnet run --project src/Triesoft.Cli -- encrypt laporan.pdf --key-id 2026-09-TEST --key <64-karakter-hex>
+dotnet run --project src/Triesoft.Cli -- decrypt laporan.pdf.ts4 --key-id 2026-09-TEST --key <64-karakter-hex>
+```
+
+## Yang belum ada
+
+- Pengiriman kunci otomatis dari Mabes ke Polda (sekarang kunci diimpor manual).
+- Algoritma tambahan (ChaCha20-Poly1305, algoritma nasional BSSN, dan algoritma tahan komputer kuantum).
+- Peran Auditor terpisah dan login dua langkah (kartu pintar/OTP).
