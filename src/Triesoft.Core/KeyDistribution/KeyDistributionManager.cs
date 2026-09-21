@@ -59,6 +59,14 @@ public sealed class KeyDistributionManager(FileDistributionStore store, MonthlyK
     /// <summary>Sisi Polda: memverifikasi paket terhadap penerbit tepercaya, membukanya, dan mengimpor kuncinya sebagai Active.</summary>
     public KeyPackage ImportPackage(KeyPackage package)
     {
+        // Dicek sebelum "penerbit tepercaya": pencabutan menghapus penerbit tepercaya, dan pesannya harus menjelaskan sebabnya.
+        // Ini hanya untuk pesan yang jelas -- keamanan tetap dari pencocokan sidik jari dan verifikasi tanda tangan di Open.
+        if (store.ListRevoked().FirstOrDefault(r => r.Kind == PublicKeyKind.Issuer && r.Fingerprint == package.IssuerFingerprint) is { } revoked)
+        {
+            throw new KeyDistributionException(
+                $"Paket berasal dari penerbit yang kuncinya sudah dicabut ({revoked.Reason}). Hubungi Bidsandi Mabes untuk kunci publik penerbit yang baru.");
+        }
+
         var issuer = store.GetTrustedIssuer()
             ?? throw new KeyDistributionException("Belum ada penerbit tepercaya -- daftarkan kunci publik Mabes terlebih dahulu.");
 

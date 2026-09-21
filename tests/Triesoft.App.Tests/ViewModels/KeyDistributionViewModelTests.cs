@@ -103,6 +103,115 @@ public class KeyDistributionViewModelTests : IDisposable
     }
 
     [Fact]
+    public void RequireReasonForChange_BlocksBlankReason()
+    {
+        var jatim = NewMachine("POLDA-JATIM");
+
+        Assert.False(jatim.Vm.RequireReasonForChange());
+        Assert.Contains("Alasan wajib", jatim.Vm.ErrorMessage);
+
+        jatim.Vm.IdentityChangeReason = "laptop hilang";
+        Assert.True(jatim.Vm.RequireReasonForChange());
+        Assert.Null(jatim.Vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void RotateRecipientKey_ChangesFingerprint_ClearsReason_AndAudits()
+    {
+        var jatim = NewMachine("POLDA-JATIM");
+        var before = jatim.Vm.RecipientFingerprint;
+        jatim.Vm.IdentityChangeReason = "laptop hilang";
+
+        jatim.Vm.RotateRecipientKeyCommand.Execute(null);
+
+        Assert.Null(jatim.Vm.ErrorMessage);
+        Assert.NotEqual(before, jatim.Vm.RecipientFingerprint);
+        Assert.Equal("", jatim.Vm.IdentityChangeReason);
+        var revoked = Assert.Single(jatim.Vm.Revoked);
+        Assert.Equal(before, revoked.Fingerprint);
+        Assert.True(jatim.Vm.HasRevoked);
+
+        var entry = Assert.Single(jatim.Audit.ReadAll(), e => e.Action == AuditAction.RecipientKeyRotated);
+        Assert.Contains("laptop hilang", entry.Details);
+        Assert.Contains(before, entry.Details);
+    }
+
+    [Fact]
+    public void RotateWithoutReason_ShowsErrorAndChangesNothing()
+    {
+        var jatim = NewMachine("POLDA-JATIM");
+        var before = jatim.Vm.RecipientFingerprint;
+
+        jatim.Vm.RotateRecipientKeyCommand.Execute(null);
+
+        Assert.Contains("Alasan wajib", jatim.Vm.ErrorMessage);
+        Assert.Equal(before, jatim.Vm.RecipientFingerprint);
+        Assert.DoesNotContain(jatim.Audit.ReadAll(), e => e.Action == AuditAction.RecipientKeyRotated);
+    }
+
+    [Fact]
+    public void RotateIssuerKey_ChangesIssuerFingerprint_AndAudits()
+    {
+        var mabes = NewMachine("MABES");
+        mabes.Vm.ActivateIssuerCommand.Execute(null);
+        var before = mabes.Vm.IssuerFingerprint;
+        mabes.Vm.IdentityChangeReason = "rotasi berkala";
+
+        mabes.Vm.RotateIssuerKeyCommand.Execute(null);
+
+        Assert.Null(mabes.Vm.ErrorMessage);
+        Assert.NotEqual(before, mabes.Vm.IssuerFingerprint);
+        Assert.Contains(mabes.Audit.ReadAll(), e => e.Action == AuditAction.IssuerKeyRotated);
+    }
+
+    [Fact]
+    public void RevokeRecipient_RemovesFromListAndAudits()
+    {
+        var mabes = NewMachine("MABES");
+        var jatim = NewMachine("POLDA-JATIM");
+        var jatimKeyFile = Path.Combine(_root, "jatim.ts4pub");
+        jatim.Vm.ExportRecipientKey(jatimKeyFile);
+        mabes.Vm.ActivateIssuerCommand.Execute(null);
+        mabes.Vm.PreviewPublicKeyFile(jatimKeyFile, PublicKeyKind.Recipient);
+        mabes.Vm.CommitPendingRecipient();
+        mabes.Vm.IdentityChangeReason = "mesin hilang";
+
+        mabes.Vm.RevokeRecipient(mabes.Vm.Recipients.Single());
+
+        Assert.Null(mabes.Vm.ErrorMessage);
+        Assert.Empty(mabes.Vm.Recipients);
+        Assert.True(mabes.Vm.HasNoRecipients);
+        Assert.Contains(mabes.Audit.ReadAll(), e => e.Action == AuditAction.RecipientRevoked && e.Details.Contains("mesin hilang"));
+
+        // kunci yang sudah dicabut tidak bisa didaftarkan lagi
+        Assert.NotNull(mabes.Vm.PreviewPublicKeyFile(jatimKeyFile, PublicKeyKind.Recipient));
+        mabes.Vm.CommitPendingRecipient();
+        Assert.Contains("sudah dicabut", mabes.Vm.ErrorMessage);
+        Assert.Empty(mabes.Vm.Recipients);
+    }
+
+    [Fact]
+    public void RevokeTrustedIssuer_ClearsTrustAndAudits()
+    {
+        var mabes = NewMachine("MABES");
+        var jatim = NewMachine("POLDA-JATIM");
+        var mabesKeyFile = Path.Combine(_root, "mabes.ts4pub");
+        mabes.Vm.ActivateIssuerCommand.Execute(null);
+        mabes.Vm.ExportIssuerKey(mabesKeyFile);
+        jatim.Vm.PreviewPublicKeyFile(mabesKeyFile, PublicKeyKind.Issuer);
+        jatim.Vm.CommitPendingIssuer();
+        Assert.True(jatim.Vm.HasTrustedIssuer);
+        jatim.Vm.IdentityChangeReason = "kunci Mabes bocor";
+
+        jatim.Vm.RevokeTrustedIssuerCommand.Execute(null);
+
+        Assert.Null(jatim.Vm.ErrorMessage);
+        Assert.False(jatim.Vm.HasTrustedIssuer);
+        Assert.Contains("Belum ada penerbit tepercaya", jatim.Vm.TrustedIssuerText);
+        Assert.Contains(jatim.Audit.ReadAll(), e => e.Action == AuditAction.IssuerRevoked);
+    }
+
+    [Fact]
     public void IssuePackages_WithoutSelectedRecipient_ShowsError()
     {
         var mabes = NewMachine("MABES");

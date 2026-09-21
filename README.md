@@ -100,6 +100,18 @@ Alternatif dari mengetik kunci hex. Kunci tidak pernah tampil sebagai teks, dan 
 2. Kirim tiap file ke Polda-nya lewat saluran apa saja (email, USB). Isinya terenkripsi dan ditandatangani.
 3. **Polda:** *Pilih Paket Kunci*. Tanda tangan dan tujuan diperiksa, lalu kunci masuk sebagai Active.
 
+**Kalau kunci identitas bocor atau mesin hilang** (kartu *Rotasi dan Pencabutan Kunci Identitas*, alasan wajib diisi dan tercatat di audit log):
+
+| Situasi | Yang dilakukan | Akibat |
+|---|---|---|
+| Kunci privat **Polda** bocor atau laptop hilang | Polda: *Rotasi Kunci Penerima*. Mabes: *Cabut* Polda itu, lalu daftarkan kunci publik baru (sidik jari dicocokkan lagi) | Kunci privat lama dihancurkan. Paket untuk kunci lama tidak bisa diimpor lagi |
+| Kunci privat **Mabes** bocor | Mabes: *Rotasi Kunci Penerbit*, kirim kunci publik baru. Tiap Polda: *Cabut Penerbit Tepercaya*, lalu percayai kunci baru (sidik jari dicocokkan) | Paket dari kunci lama ditolak. Kunci bulanan yang sudah diimpor tidak terpengaruh |
+| Pergantian berkala | Rotasi tanpa pencabutan | Sama seperti di atas |
+
+Kunci publik yang sudah dicabut **tidak bisa didaftarkan atau dipercaya lagi** dan pencabutan tidak bisa dibatalkan. Kalau salah cabut, lakukan rotasi kunci pihak itu dan daftar ulang.
+
+> Paket yang sudah terbit tidak bisa ditarik kembali. Kalau kunci privat Polda **bocor** (bukan sekadar rotasi berkala), cabut juga kunci bulanan terkait di **Kelola Kunci**.
+
 ### Arti status kunci
 
 | Status | Artinya |
@@ -145,6 +157,6 @@ dotnet run --project src/Triesoft.Cli -- decrypt laporan.pdf.ts4 --key-id 2026-0
 
 ## Yang belum ada
 
-- Rotasi atau pencabutan kunci identitas distribusi (Mabes/Polda).
+- Hybrid tahan komputer kuantum (ML-KEM) untuk distribusi kunci.
 - Algoritma tambahan (ChaCha20-Poly1305, algoritma nasional BSSN, dan algoritma tahan komputer kuantum).
 - Peran Auditor terpisah dan login dua langkah (kartu pintar/OTP).

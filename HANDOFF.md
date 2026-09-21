@@ -24,7 +24,7 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 5 | Distribusi kunci Mabes ke Polda | Selesai (belum di-commit; lihat bagian "Distribusi kunci") |
 | 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
 
-Tes: 75 di `Triesoft.Core.Tests`, 22 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
+Tes: 113 di `Triesoft.Core.Tests`, 28 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -74,7 +74,11 @@ Tes: 75 di `Triesoft.Core.Tests`, 22 di `Triesoft.App.Tests`, semua hijau di Win
 - `FileDistributionStore` menyimpan kunci privat penerima (`recipient.key`) dan penerbit (`issuer.key`) terproteksi `IKeyProtector`. Kunci privat dibuat di mesin itu dan tidak pernah diekspor. Mesin menjadi "penerbit" (Mabes) hanya setelah tombol "Aktifkan sebagai Penerbit". Penerbit tepercaya (pinned) dan daftar penerima juga disimpan di sini.
 - `KeyDistributionManager`: `IssueMonthlyKey` (Mabes membangkitkan kunci acak, satu paket per Polda, opsional menyimpan salinan lokal, kunci di memori di-zeroize) dan `ImportPackage` (Polda memverifikasi lalu memanggil `MonthlyKeyManager.ImportMonthlyKey`).
 - Layar **Distribusi Kunci** (khusus Admin) dan aksi audit baru: `IssuerIdentityCreated`, `IssuerTrusted`, `RecipientRegistered`, `RecipientRemoved`, `KeyPackageIssued`, `KeyPackageImported`, `KeyPackageImportFailed`.
-- **Belum ada:** rotasi kunci identitas (kalau kunci privat Polda/Mabes bocor, saat ini harus hapus folder `Distribution` dan daftar ulang), pencabutan penerbit, dan hybrid ML-KEM. Kunci dari tes `Ekspor/Impor` lewat dialog file belum diuji manual, hanya lewat tes ViewModel.
+- **Rotasi dan pencabutan kunci identitas** (`FileDistributionStore`): `RotateRecipientKey` (Polda), `RotateIssuerKey` (Mabes), `RevokeTrustedIssuer` (Polda), `RevokeRecipient` (Mabes). Semuanya wajib beralasan, dicatat di audit (`RecipientKeyRotated`, `IssuerKeyRotated`, `IssuerRevoked`, `RecipientRevoked`), dan di UI didahului dialog konfirmasi. Rotasi menulis kunci baru ke `*.key.new`, menimpa file kunci privat lama dengan byte acak, lalu menukarnya (upaya terbaik; salinan lama di SSD/OneDrive bisa tersisa).
+- **`revoked.json` bersifat final:** sidik jari yang tercatat (dicabut, atau kunci lama hasil rotasi) ditolak oleh `AddRecipient` dan `SetTrustedIssuer`, dan tidak ada fitur "batalkan pencabutan". Salah cabut dipulihkan dengan rotasi kunci pihak itu dan mendaftar ulang. Mengganti penerbit tepercaya lewat impor kunci lain **tidak** otomatis mencabut yang lama (supaya salah impor bisa dikoreksi).
+- **Batasan yang disengaja:** paket yang sudah terbit tidak bisa ditarik. Kalau kunci privat Polda bocor, cabut juga kunci bulanan terkait di Kelola Kunci (kalau penyerang punya paketnya, ia bisa membuka KEK-nya).
+- **Belum ada:** hybrid ML-KEM. Dialog file (ekspor/impor, pilih folder) belum diuji manual, hanya lewat tes ViewModel.
+- **Jebakan `AuditAction`:** `audit.log` menyimpan aksi sebagai **angka**, sedangkan hash rantai memakai **nama** enum. Nilai numerik enum sekarang ditulis eksplisit dan dikunci oleh `AuditActionStabilityTests`. Jangan menyisipkan atau mengurutkan ulang anggota; tambahkan di akhir. Commit `a49a51b` sempat menyisipkan anggota baru di tengah dan menggeser `FileEncrypted` dan sesudahnya, sehingga entri lama terbaca sebagai aksi lain dan verifikasi rantai akan gagal. Sudah diperbaiki; log asli developer diverifikasi utuh setelahnya. Kalau ada mesin lain yang sempat memakai fitur distribusi kunci dengan `a49a51b`, entri distribusinya di log mesin itu (angka 8-14) akan terbaca salah.
 
 ## 4. Jebakan teknis yang sudah ditemui
 
@@ -103,7 +107,7 @@ Tes: 75 di `Triesoft.Core.Tests`, 22 di `Triesoft.App.Tests`, semua hijau di Win
 ## 7. Langkah berikutnya yang disarankan
 
 1. Di Windows: `dotnet test`, jalankan aplikasi, catat masalah tampilan atau alur.
-2. **Distribusi kunci**: sudah diimplementasikan (lihat bagian 3). Sisa: uji manual antar-dua-mesin lewat dialog file, konfirmasi ke Bidsandi apakah alur digital + sidik jari manual diterima, pertimbangkan hybrid ML-KEM, dan peran Superadmin vs AdminDaerah (sekarang penerbit ditentukan oleh tombol "Aktifkan sebagai Penerbit", bukan peran).
+2. **Distribusi kunci**: sudah diimplementasikan (lihat bagian 3). Rotasi dan pencabutan kunci identitas juga sudah ada. Sisa: uji manual antar-dua-mesin lewat dialog file, konfirmasi ke Bidsandi apakah alur digital + sidik jari manual diterima, pertimbangkan hybrid ML-KEM, dan peran Superadmin vs AdminDaerah (sekarang penerbit ditentukan oleh tombol "Aktifkan sebagai Penerbit", bukan peran).
 3. Tambahkan peran **Auditor** (hanya bisa melihat audit log) kalau dibutuhkan pemisahan tugas.
 4. Profile B (ChaCha20-Poly1305 via BouncyCastle) dan persiapan Profile C (algoritma nasional) setelah ada jawaban dari BSSN.
 5. Untuk pemakaian resmi: audit keamanan pihak ketiga, code signing, installer.

@@ -36,6 +36,15 @@ public partial class KeyDistributionViewModel : ViewModelBase
 
     public ObservableCollection<RecipientItem> Recipients { get; } = [];
 
+    public ObservableCollection<RevokedKey> Revoked { get; } = [];
+
+    /// <summary>Alasan untuk rotasi/pencabutan berikutnya. Wajib, dan tercatat di audit log.</summary>
+    [ObservableProperty]
+    private string _identityChangeReason = "";
+
+    [ObservableProperty]
+    private bool _hasTrustedIssuer;
+
     /// <summary>Nama yang ditulis ke file kunci publik yang diekspor mesin ini (mis. "POLDA JATIM").</summary>
     [ObservableProperty]
     private string _ownName = Environment.MachineName;
@@ -65,6 +74,7 @@ public partial class KeyDistributionViewModel : ViewModelBase
     private bool _importLocally = true;
 
     public bool HasNoRecipients => Recipients.Count == 0;
+    public bool HasRevoked => Revoked.Count > 0;
 
     public string IssuerFingerprintText => HasIssuerIdentity ? IssuerFingerprint : "Mesin ini bukan penerbit";
 
@@ -87,6 +97,7 @@ public partial class KeyDistributionViewModel : ViewModelBase
         OnPropertyChanged(nameof(IssuerFingerprintText));
 
         var trusted = _store.GetTrustedIssuer();
+        HasTrustedIssuer = trusted is not null;
         TrustedIssuerText = trusted is null
             ? "Belum ada penerbit tepercaya -- paket kunci belum bisa diimpor."
             : $"{trusted.Name}\n{trusted.Fingerprint}";
@@ -95,6 +106,11 @@ public partial class KeyDistributionViewModel : ViewModelBase
         foreach (var r in _store.ListRecipients())
             Recipients.Add(new RecipientItem(r));
         OnPropertyChanged(nameof(HasNoRecipients));
+
+        Revoked.Clear();
+        foreach (var r in _store.ListRevoked().OrderByDescending(r => r.RevokedAt))
+            Revoked.Add(r);
+        OnPropertyChanged(nameof(HasRevoked));
     }
 
     // --- identitas mesin ini ------------------------------------------------------------------
@@ -177,12 +193,67 @@ public partial class KeyDistributionViewModel : ViewModelBase
         SuccessMessage = $"Penerima '{file.Name}' terdaftar.";
     });
 
-    public void RemoveRecipient(RecipientItem item) => Run(() =>
+    // --- rotasi dan pencabutan (perlu konfirmasi di View; alasan wajib) ------------------------------
+
+    /// <summary>Dipanggil View SEBELUM dialog konfirmasi, supaya Admin tidak mengonfirmasi aksi yang pasti ditolak.</summary>
+    public bool RequireReasonForChange()
     {
-        _store.RemoveRecipient(item.Fingerprint);
-        _auditLog.Record(Actor, AuditAction.RecipientRemoved, $"nama={item.Name}, sidikJari={item.Fingerprint}");
+        ClearMessages();
+        if (!string.IsNullOrWhiteSpace(IdentityChangeReason)) return true;
+        ErrorMessage = "Alasan wajib diisi untuk rotasi atau pencabutan.";
+        return false;
+    }
+
+    /// <summary>Mabes: mencabut penerima. Dipanggil dari code-behind SETELAH konfirmasi.</summary>
+    public void RevokeRecipient(RecipientItem item) => Run(() =>
+    {
+        var reason = IdentityChangeReason;
+        _store.RevokeRecipient(item.Fingerprint, reason);
+        _auditLog.Record(Actor, AuditAction.RecipientRevoked, $"nama={item.Name}, sidikJari={item.Fingerprint}, alasan={reason.Trim()}");
+        IdentityChangeReason = "";
         Refresh();
-        SuccessMessage = $"Penerima '{item.Name}' dihapus dari daftar.";
+        SuccessMessage = $"Penerima '{item.Name}' dicabut. Paket yang sudah terlanjur terbit untuknya tidak bisa ditarik -- " +
+                         "kalau kunci privatnya bocor, cabut juga kunci bulanan terkait di Kelola Kunci.";
+    });
+
+    /// <summary>Polda: mencabut kepercayaan pada penerbit saat ini. Dipanggil dari code-behind SETELAH konfirmasi.</summary>
+    [RelayCommand]
+    private void RevokeTrustedIssuer() => Run(() =>
+    {
+        var reason = IdentityChangeReason;
+        var issuer = _store.RevokeTrustedIssuer(reason);
+        _auditLog.Record(Actor, AuditAction.IssuerRevoked, $"nama={issuer.Name}, sidikJari={issuer.Fingerprint}, alasan={reason.Trim()}");
+        IdentityChangeReason = "";
+        Refresh();
+        SuccessMessage = $"Penerbit '{issuer.Name}' dicabut. Paket darinya kini ditolak sampai Anda mempercayai kunci publik penerbit yang baru.";
+    });
+
+    /// <summary>Mengganti kunci penerima mesin ini. Dipanggil dari code-behind SETELAH konfirmasi.</summary>
+    [RelayCommand]
+    private void RotateRecipientKey() => Run(() =>
+    {
+        var reason = IdentityChangeReason;
+        var oldFingerprint = RecipientFingerprint;
+        _store.RotateRecipientKey(reason);
+        _auditLog.Record(Actor, AuditAction.RecipientKeyRotated, $"sidikJariLama={oldFingerprint}, alasan={reason.Trim()}");
+        IdentityChangeReason = "";
+        Refresh();
+        SuccessMessage = "Kunci penerima diganti dan kunci lama dihancurkan. Ekspor ulang kunci publik penerima, serahkan ke Mabes, " +
+                         "lalu cocokkan sidik jari baru. Paket yang dibuat untuk kunci lama tidak bisa diimpor lagi.";
+    });
+
+    /// <summary>Mabes: mengganti kunci penerbit. Dipanggil dari code-behind SETELAH konfirmasi.</summary>
+    [RelayCommand]
+    private void RotateIssuerKey() => Run(() =>
+    {
+        var reason = IdentityChangeReason;
+        var oldFingerprint = IssuerFingerprint;
+        _store.RotateIssuerKey(reason);
+        _auditLog.Record(Actor, AuditAction.IssuerKeyRotated, $"sidikJariLama={oldFingerprint}, alasan={reason.Trim()}");
+        IdentityChangeReason = "";
+        Refresh();
+        SuccessMessage = "Kunci penerbit diganti dan kunci lama dihancurkan. Ekspor kunci publik penerbit yang baru dan kirim ke tiap Polda; " +
+                         "paket baru ditolak sampai Polda mempercayai kunci itu. Kunci bulanan yang sudah diimpor tidak terpengaruh.";
     });
 
     // --- sisi penerbit (Mabes) ----------------------------------------------------------------------

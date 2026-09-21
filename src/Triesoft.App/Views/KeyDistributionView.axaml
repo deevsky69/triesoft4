@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:dist="clr-namespace:Triesoft.Core.KeyDistribution;assembly=Triesoft.Core"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.KeyDistributionView"
              x:DataType="vm:KeyDistributionViewModel">
@@ -54,7 +55,7 @@
                                 <TextBlock Grid.Column="2" Text="{Binding Fingerprint}" Classes="caption"
                                            FontFamily="Consolas,Menlo,monospace" FontSize="10"
                                            TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <Button Grid.Column="3" Content="Hapus" Classes="danger" Click="OnRemoveRecipientClick" />
+                                <Button Grid.Column="3" Content="Cabut" Classes="danger" Click="OnRevokeRecipientClick" />
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -101,6 +102,47 @@
                 <TextBlock Text="Impor Paket Kunci" Classes="h2" />
                 <TextBlock Text="Pilih file .ts4kp dari Mabes. Tanda tangan dan tujuan paket diperiksa sebelum kunci dipakai." Classes="secondary" TextWrapping="Wrap" />
                 <Button Content="Pilih Paket Kunci..." Classes="primary" Click="OnImportPackageClick" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <!-- Rotasi dan pencabutan kunci identitas -->
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Rotasi dan Pencabutan Kunci Identitas" Classes="h2" />
+                <TextBlock Classes="secondary" TextWrapping="Wrap"
+                           Text="Pakai saat kunci privat dicurigai bocor, mesin hilang, atau untuk pergantian berkala. Kunci privat lama dihancurkan dan kunci publik lamanya tidak bisa dipercaya lagi. Kalau penyebabnya kebocoran, cabut juga kunci bulanan terkait di Kelola Kunci, karena paket yang sudah terbit tidak bisa ditarik." />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Alasan (wajib, tercatat di audit log)" Classes="caption" />
+                    <TextBox Text="{Binding IdentityChangeReason}" PlaceholderText="mis. laptop Polda hilang" />
+                </StackPanel>
+                <WrapPanel>
+                    <Button Content="Rotasi Kunci Penerima" Classes="danger" Click="OnRotateRecipientClick" Margin="0,0,8,8" />
+                    <Button Content="Rotasi Kunci Penerbit" Classes="danger" Click="OnRotateIssuerClick" Margin="0,0,8,8"
+                            IsVisible="{Binding HasIssuerIdentity}" />
+                    <Button Content="Cabut Penerbit Tepercaya" Classes="danger" Click="OnRevokeIssuerClick" Margin="0,0,8,8"
+                            IsVisible="{Binding HasTrustedIssuer}" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding HasRevoked}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Kunci yang Dicabut" Classes="h2" />
+                <ItemsControl ItemsSource="{Binding Revoked}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="dist:RevokedKey">
+                            <StackPanel Spacing="2" Margin="0,6">
+                                <TextBlock Classes="body" TextWrapping="Wrap">
+                                    <Run Text="{Binding Kind}" /> <Run Text="-" /> <Run Text="{Binding Name}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Reason}" Classes="secondary" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Fingerprint}" Classes="caption"
+                                           FontFamily="Consolas,Menlo,monospace" FontSize="10" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding RevokedAt, StringFormat='{}{0:yyyy-MM-dd HH:mm} UTC'}" Classes="caption" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </Border>
 

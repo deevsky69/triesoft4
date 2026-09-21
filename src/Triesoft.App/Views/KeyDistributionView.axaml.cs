@@ -47,15 +47,54 @@ public partial class KeyDistributionView : UserControl
         if (confirmed) vm.CommitPendingRecipient();
     }
 
-    private async void OnRemoveRecipientClick(object? sender, RoutedEventArgs e)
+    private async void OnRevokeRecipientClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not KeyDistributionViewModel vm) return;
+        if (DataContext is not KeyDistributionViewModel vm || !vm.RequireReasonForChange()) return;
         if (sender is not Control { DataContext: RecipientItem item }) return;
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
         var confirmed = await ConfirmDialog.ShowAsync(owner,
-            $"Hapus '{item.Name}' dari daftar penerima? Paket yang sudah terbit tetap berlaku.", "Hapus");
-        if (confirmed) vm.RemoveRecipient(item);
+            $"Cabut penerima '{item.Name}'?\n\nSidik jari:\n{item.Fingerprint}\n\n" +
+            "Kunci publik ini tidak bisa didaftarkan lagi. Paket yang sudah terbit untuknya tidak bisa ditarik. " +
+            "Kalau Polda ini tetap dipakai, ia harus merotasi kunci dan mendaftar ulang dengan sidik jari baru.",
+            "Cabut Penerima");
+        if (confirmed) vm.RevokeRecipient(item);
+    }
+
+    private async void OnRevokeIssuerClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not KeyDistributionViewModel vm || !vm.RequireReasonForChange()) return;
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+
+        var confirmed = await ConfirmDialog.ShowAsync(owner,
+            "Cabut penerbit tepercaya?\n\nSemua paket kunci dari penerbit ini langsung ditolak, dan kunci publiknya " +
+            "tidak bisa dipercaya lagi. Kunci bulanan yang sudah diimpor tetap ada.",
+            "Cabut Penerbit");
+        if (confirmed) vm.RevokeTrustedIssuerCommand.Execute(null);
+    }
+
+    private async void OnRotateRecipientClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not KeyDistributionViewModel vm || !vm.RequireReasonForChange()) return;
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+
+        var confirmed = await ConfirmDialog.ShowAsync(owner,
+            "Rotasi kunci penerima mesin ini?\n\nKunci privat lama dihancurkan permanen. Paket yang sudah dibuat Mabes untuk kunci lama " +
+            "dan belum diimpor tidak bisa dibuka lagi. Anda harus mengekspor kunci publik baru dan mendaftarkannya ulang ke Mabes.",
+            "Rotasi Kunci Penerima");
+        if (confirmed) vm.RotateRecipientKeyCommand.Execute(null);
+    }
+
+    private async void OnRotateIssuerClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not KeyDistributionViewModel vm || !vm.RequireReasonForChange()) return;
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+
+        var confirmed = await ConfirmDialog.ShowAsync(owner,
+            "Rotasi kunci penerbit mesin ini?\n\nKunci privat lama dihancurkan permanen. Paket baru ditolak setiap Polda " +
+            "sampai mereka mempercayai kunci publik penerbit yang baru (dengan verifikasi sidik jari). Kunci bulanan yang sudah diimpor tidak terpengaruh.",
+            "Rotasi Kunci Penerbit");
+        if (confirmed) vm.RotateIssuerKeyCommand.Execute(null);
     }
 
     private async void OnTrustIssuerClick(object? sender, RoutedEventArgs e)
