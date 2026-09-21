@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.KeyDistributionView"
+             x:DataType="vm:KeyDistributionViewModel">
+    <StackPanel Spacing="24" MaxWidth="720" HorizontalAlignment="Left">
+
+        <TextBlock Classes="secondary" TextWrapping="Wrap"
+                   Text="Kunci bulanan dikirim dalam paket terenkripsi khusus tiap Polda dan ditandatangani Mabes. Kepercayaan antar-pihak dibangun lewat sidik jari kunci publik yang diverifikasi lewat jalur terpisah (telepon/tatap muka)." />
+
+        <!-- Identitas mesin ini -->
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Identitas Mesin Ini" Classes="h2" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Nama satuan (ditulis di file kunci publik)" Classes="caption" />
+                    <TextBox Text="{Binding OwnName}" PlaceholderText="mis. POLDA JATIM" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Sidik jari kunci penerima" Classes="caption" />
+                    <TextBox Text="{Binding RecipientFingerprint}" IsReadOnly="True" FontFamily="Consolas,Menlo,monospace" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+                <Button Content="Ekspor Kunci Publik Penerima..." Classes="secondary" Click="OnExportRecipientClick" HorizontalAlignment="Left" />
+
+                <Border Height="1" Background="{StaticResource Brush.Background}" Margin="0,4" />
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Sidik jari kunci penerbit" Classes="caption" />
+                    <TextBox Text="{Binding IssuerFingerprintText}" IsReadOnly="True" FontFamily="Consolas,Menlo,monospace" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Aktifkan sebagai Penerbit (Mabes)" Classes="secondary"
+                            Command="{Binding ActivateIssuerCommand}"
+                            IsVisible="{Binding !HasIssuerIdentity}" />
+                    <Button Content="Ekspor Kunci Publik Penerbit..." Classes="secondary" Click="OnExportIssuerClick"
+                            IsVisible="{Binding HasIssuerIdentity}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Sisi penerbit: Mabes -->
+        <Border Classes="card" IsVisible="{Binding HasIssuerIdentity}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Penerima Terdaftar" Classes="h2" />
+                <TextBlock Text="Belum ada penerima. Impor kunci publik Polda (file .ts4pub) dan cocokkan sidik jarinya."
+                           Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding HasNoRecipients}" />
+                <ItemsControl ItemsSource="{Binding Recipients}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:RecipientItem">
+                            <Grid ColumnDefinitions="Auto,170,*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="body" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding Fingerprint}" Classes="caption"
+                                           FontFamily="Consolas,Menlo,monospace" FontSize="10"
+                                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Button Grid.Column="3" Content="Hapus" Classes="danger" Click="OnRemoveRecipientClick" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="Impor Kunci Publik Polda..." Classes="secondary" Click="OnAddRecipientClick" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card" IsVisible="{Binding HasIssuerIdentity}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Terbitkan Kunci Bulanan" Classes="h2" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Key ID" Classes="caption" />
+                    <TextBox Text="{Binding IssueKeyId}" PlaceholderText="mis. 2026-10" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="Berlaku Dari" Classes="caption" />
+                        <CalendarDatePicker SelectedDate="{Binding IssueValidFrom}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6">
+                        <TextBlock Text="Berlaku Sampai" Classes="caption" />
+                        <CalendarDatePicker SelectedDate="{Binding IssueValidUntil}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="Kunci acak baru dibuat, dibungkus untuk penerima yang dicentang di daftar atas." Classes="caption" TextWrapping="Wrap" />
+                <CheckBox IsChecked="{Binding ImportLocally}" Content="Simpan juga salinan kunci di mesin ini" />
+                <Button Content="Terbitkan Paket..." Classes="primary" Click="OnIssueClick" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <!-- Sisi penerima: Polda -->
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Penerbit Tepercaya" Classes="h2" />
+                <TextBox Text="{Binding TrustedIssuerText}" IsReadOnly="True" TextWrapping="Wrap"
+                         FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                <Button Content="Impor Kunci Publik Mabes..." Classes="secondary" Click="OnTrustIssuerClick" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Impor Paket Kunci" Classes="h2" />
+                <TextBlock Text="Pilih file .ts4kp dari Mabes. Tanda tangan dan tujuan paket diperiksa sebelum kunci dipakai." Classes="secondary" TextWrapping="Wrap" />
+                <Button Content="Pilih Paket Kunci..." Classes="primary" Click="OnImportPackageClick" HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding ErrorMessage}" Classes="error-text" TextWrapping="Wrap"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        <TextBlock Text="{Binding SuccessMessage}" Classes="success-text" TextWrapping="Wrap"
+                   IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+</UserControl>

@@ -13,6 +13,14 @@ public enum AuditAction
     KeyRevoked,
     KeyPurged,
 
+    IssuerIdentityCreated,
+    IssuerTrusted,
+    RecipientRegistered,
+    RecipientRemoved,
+    KeyPackageIssued,
+    KeyPackageImported,
+    KeyPackageImportFailed,
+
     FileEncrypted,
     FileEncryptFailed,
     FileDecrypted,

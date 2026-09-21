@@ -21,6 +21,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
     public bool IsEncryptPageActive => CurrentPage is EncryptViewModel;
     public bool IsDecryptPageActive => CurrentPage is DecryptViewModel;
     public bool IsKeyManagementPageActive => CurrentPage is KeyManagementViewModel;
+    public bool IsKeyDistributionPageActive => CurrentPage is KeyDistributionViewModel;
     public bool IsUserManagementPageActive => CurrentPage is UserManagementViewModel;
     public bool IsAuditLogPageActive => CurrentPage is AuditLogViewModel;
 
@@ -31,6 +32,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
         OnPropertyChanged(nameof(IsEncryptPageActive));
         OnPropertyChanged(nameof(IsDecryptPageActive));
         OnPropertyChanged(nameof(IsKeyManagementPageActive));
+        OnPropertyChanged(nameof(IsKeyDistributionPageActive));
         OnPropertyChanged(nameof(IsUserManagementPageActive));
         OnPropertyChanged(nameof(IsAuditLogPageActive));
     }
@@ -55,6 +57,13 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
     {
         if (!IsAdmin) return;
         SetPage("Kelola Kunci", services.GetRequiredService<KeyManagementViewModel>());
+    }
+
+    [RelayCommand]
+    private void NavigateToKeyDistribution()
+    {
+        if (!IsAdmin) return;
+        SetPage("Distribusi Kunci", services.GetRequiredService<KeyDistributionViewModel>());
     }
 
     [RelayCommand]

@@ -6,6 +6,7 @@ using Triesoft.App.Services;
 using Triesoft.App.ViewModels;
 using Triesoft.Core.Audit;
 using Triesoft.Core.Identity;
+using Triesoft.Core.KeyDistribution;
 using Triesoft.Core.KeyManagement;
 
 namespace Triesoft.App;
@@ -40,6 +41,8 @@ public partial class App : Application
         services.AddSingleton<IKeyProtector>(_ => CreateProtector());
         services.AddSingleton<IKeyStore>(sp => new FileKeyStore(AppPaths.KeyStoreDirectory, sp.GetRequiredService<IKeyProtector>()));
         services.AddSingleton<MonthlyKeyManager>();
+        services.AddSingleton(sp => new FileDistributionStore(AppPaths.DistributionDirectory, sp.GetRequiredService<IKeyProtector>()));
+        services.AddSingleton<KeyDistributionManager>();
         services.AddSingleton<IUserStore>(_ => new FileUserStore(AppPaths.UserStoreDirectory));
         services.AddSingleton<AuthService>();
         services.AddSingleton<IAuditLog>(_ => new FileAuditLog(AppPaths.AuditLogDirectory));
@@ -50,6 +53,7 @@ public partial class App : Application
         services.AddTransient<EncryptViewModel>();
         services.AddTransient<DecryptViewModel>();
         services.AddTransient<KeyManagementViewModel>();
+        services.AddTransient<KeyDistributionViewModel>();
         services.AddTransient<UserManagementViewModel>();
         services.AddTransient<AuditLogViewModel>();
         services.AddSingleton<AppShellViewModel>();

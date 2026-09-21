@@ -16,6 +16,7 @@ public static class AppPaths
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Triesoft4");
 
     public static string KeyStoreDirectory => Path.Combine(DataRoot, "Keys");
+    public static string DistributionDirectory => Path.Combine(DataRoot, "Distribution");
     public static string UserStoreDirectory => Path.Combine(DataRoot, "Users");
     public static string AuditLogDirectory => Path.Combine(DataRoot, "Audit");
 }

@@ -8,6 +8,7 @@ using Triesoft.App.ViewModels;
 using Triesoft.App.Views;
 using Triesoft.Core.Audit;
 using Triesoft.Core.Identity;
+using Triesoft.Core.KeyDistribution;
 using Triesoft.Core.KeyManagement;
 using Xunit;
 
@@ -74,6 +75,26 @@ public class ScreenshotTests
         shell.Initialize(user);
         shell.NavigateToKeyManagementCommand.Execute(null);
         Render(new MainShellView { DataContext = shell }, "main-shell-key-management.png");
+    }
+
+    [Fact]
+    public void MainShell_KeyDistribution_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        shell.NavigateToKeyDistributionCommand.Execute(null);
+        Render(new MainShellView { DataContext = shell }, "main-shell-key-distribution.png");
+    }
+
+    [Fact]
+    public void MainShell_KeyDistribution_Issuer_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        shell.NavigateToKeyDistributionCommand.Execute(null);
+        var vm = (KeyDistributionViewModel)shell.CurrentPage!;
+        vm.ActivateIssuerCommand.Execute(null);
+        Render(new MainShellView { DataContext = shell }, "main-shell-key-distribution-issuer.png", height: 1500);
     }
 
     [Fact]
@@ -154,6 +175,10 @@ public class ScreenshotTests
         var services = new ServiceCollection();
         services.AddSingleton(authService);
         services.AddSingleton(keyManager);
+        services.AddSingleton(new FileDistributionStore(
+            Directory.CreateTempSubdirectory("triesoft4-shot-dist-").FullName, new PassthroughKeyProtector()));
+        services.AddSingleton<KeyDistributionManager>();
+        services.AddTransient<KeyDistributionViewModel>();
         services.AddSingleton<IAuditLog>(auditLog);
         services.AddSingleton<SessionContext>();
         services.AddTransient<EncryptViewModel>();
@@ -164,12 +189,12 @@ public class ScreenshotTests
         return services.BuildServiceProvider();
     }
 
-    private static void Render(Control view, string fileName)
+    private static void Render(Control view, string fileName, int height = 740)
     {
         var window = new Window
         {
             Width = 1140,
-            Height = 740,
+            Height = height,
             Content = view,
         };
         window.Show();

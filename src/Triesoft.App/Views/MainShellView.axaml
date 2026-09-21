@@ -15,6 +15,9 @@
         <DataTemplate DataType="vm:KeyManagementViewModel">
             <views:KeyManagementView />
         </DataTemplate>
+        <DataTemplate DataType="vm:KeyDistributionViewModel">
+            <views:KeyDistributionView />
+        </DataTemplate>
         <DataTemplate DataType="vm:UserManagementViewModel">
             <views:UserManagementView />
         </DataTemplate>
@@ -44,6 +47,8 @@
                             Command="{Binding NavigateToDecryptCommand}" />
                     <Button Content="Kelola Kunci" Classes="nav" Classes.active="{Binding IsKeyManagementPageActive}"
                             Command="{Binding NavigateToKeyManagementCommand}" IsVisible="{Binding IsAdmin}" />
+                    <Button Content="Distribusi Kunci" Classes="nav" Classes.active="{Binding IsKeyDistributionPageActive}"
+                            Command="{Binding NavigateToKeyDistributionCommand}" IsVisible="{Binding IsAdmin}" />
                     <Button Content="Kelola User" Classes="nav" Classes.active="{Binding IsUserManagementPageActive}"
                             Command="{Binding NavigateToUserManagementCommand}" IsVisible="{Binding IsAdmin}" />
                     <Button Content="Audit Log" Classes="nav" Classes.active="{Binding IsAuditLogPageActive}"

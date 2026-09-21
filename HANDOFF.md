@@ -21,10 +21,10 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 2 | Key management (penyimpanan dan siklus hidup kunci) | Selesai |
 | 3 | UI + login/auth + RBAC | Selesai |
 | 4 | Audit log tamper-evident | Selesai |
-| 5 | Distribusi kunci Mabes ke Polda | **Belum** |
+| 5 | Distribusi kunci Mabes ke Polda | Selesai (belum di-commit; lihat bagian "Distribusi kunci") |
 | 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
 
-Tes: 58 di `Triesoft.Core.Tests`, 16 di `Triesoft.App.Tests`, semua hijau di macOS. Build 0 warning (kecuali 1 warning API usang di test screenshot).
+Tes: 75 di `Triesoft.Core.Tests`, 22 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 warning (kecuali 1 warning API usang di test screenshot).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -67,6 +67,15 @@ Tes: 58 di `Triesoft.Core.Tests`, 16 di `Triesoft.App.Tests`, semua hijau di mac
 - Log di-cache hash terakhirnya di memori, jadi `FileAuditLog` harus **singleton** per proses. Akses multi-proses ke file yang sama belum didukung (sama seperti `FileKeyStore` dan `FileUserStore`).
 - Aksi audit dipasang di lapisan ViewModel (`Triesoft.App`), bukan di `Triesoft.Core`, karena di sanalah identitas pelaku (`SessionContext`) diketahui.
 
+**Distribusi kunci (`Triesoft.Core/KeyDistribution`)**
+- Asumsi yang dipakai karena pertanyaan terbuka di bagian 6 belum dijawab: distribusi digital (paket file), pendaftaran kunci publik lewat file `.ts4pub` + **verifikasi sidik jari manual di jalur terpisah**, peran tetap Admin/Operator (tidak ada Superadmin/AdminDaerah). Semua ini mudah diubah.
+- Kriptografi, semuanya bawaan .NET: ECDH P-384 efemeral, lalu HKDF-SHA384, lalu AES-256-GCM untuk membungkus kunci bulanan. Seluruh paket ditandatangani ECDSA P-384 (SHA-384) oleh Mabes. Header paket (KeyId, masa berlaku, sidik jari penerbit dan penerima, kunci efemeral) jadi AAD dan info HKDF, jadi mengubah metadata membuat pembukaan gagal.
+- Urutan pemeriksaan saat impor sengaja: penerbit dikenal, lalu tanda tangan valid, lalu paket untuk mesin ini, lalu dekripsi. Paket palsu ditolak sebelum kunci privat penerima dipakai. Kunci publik selain P-384 ditolak.
+- `FileDistributionStore` menyimpan kunci privat penerima (`recipient.key`) dan penerbit (`issuer.key`) terproteksi `IKeyProtector`. Kunci privat dibuat di mesin itu dan tidak pernah diekspor. Mesin menjadi "penerbit" (Mabes) hanya setelah tombol "Aktifkan sebagai Penerbit". Penerbit tepercaya (pinned) dan daftar penerima juga disimpan di sini.
+- `KeyDistributionManager`: `IssueMonthlyKey` (Mabes membangkitkan kunci acak, satu paket per Polda, opsional menyimpan salinan lokal, kunci di memori di-zeroize) dan `ImportPackage` (Polda memverifikasi lalu memanggil `MonthlyKeyManager.ImportMonthlyKey`).
+- Layar **Distribusi Kunci** (khusus Admin) dan aksi audit baru: `IssuerIdentityCreated`, `IssuerTrusted`, `RecipientRegistered`, `RecipientRemoved`, `KeyPackageIssued`, `KeyPackageImported`, `KeyPackageImportFailed`.
+- **Belum ada:** rotasi kunci identitas (kalau kunci privat Polda/Mabes bocor, saat ini harus hapus folder `Distribution` dan daftar ulang), pencabutan penerbit, dan hybrid ML-KEM. Kunci dari tes `Ekspor/Impor` lewat dialog file belum diuji manual, hanya lewat tes ViewModel.
+
 ## 4. Jebakan teknis yang sudah ditemui
 
 - Csproj template Avalonia **tidak mengaktifkan `ImplicitUsings`**. Tanpa itu banyak tipe dasar "tidak ditemukan".
@@ -94,7 +103,7 @@ Tes: 58 di `Triesoft.Core.Tests`, 16 di `Triesoft.App.Tests`, semua hijau di mac
 ## 7. Langkah berikutnya yang disarankan
 
 1. Di Windows: `dotnet test`, jalankan aplikasi, catat masalah tampilan atau alur.
-2. **Distribusi kunci Mabes ke Polda**: paket kunci terenkripsi per-Polda (KEK dibungkus dengan public key Polda: RSA-OAEP-4096 atau ECDH P-384, semuanya bawaan .NET). Pertimbangkan hybrid dengan ML-KEM. Perlu memutuskan dulu bagaimana public key Polda didaftarkan (masalah bootstrap). Baru di fase ini peran Superadmin vs AdminDaerah punya makna fungsional.
+2. **Distribusi kunci**: sudah diimplementasikan (lihat bagian 3). Sisa: uji manual antar-dua-mesin lewat dialog file, konfirmasi ke Bidsandi apakah alur digital + sidik jari manual diterima, pertimbangkan hybrid ML-KEM, dan peran Superadmin vs AdminDaerah (sekarang penerbit ditentukan oleh tombol "Aktifkan sebagai Penerbit", bukan peran).
 3. Tambahkan peran **Auditor** (hanya bisa melihat audit log) kalau dibutuhkan pemisahan tugas.
 4. Profile B (ChaCha20-Poly1305 via BouncyCastle) dan persiapan Profile C (algoritma nasional) setelah ada jawaban dari BSSN.
 5. Untuk pemakaian resmi: audit keamanan pihak ketiga, code signing, installer.

@@ -9,6 +9,7 @@ Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, ga
 - **Enkripsi file**: pilih file, klik Enkripsi, hasilnya file baru berakhiran `.ts4`.
 - **Dekripsi file**: pilih file `.ts4`, klik Dekripsi, file asli kembali dengan nama aslinya.
 - **Kelola kunci** (khusus Admin): impor kunci bulanan, cabut kunci yang dicurigai bocor, hapus kunci lama.
+- **Distribusi kunci** (khusus Admin): Mabes menerbitkan kunci bulanan sebagai paket terenkripsi per Polda (file `.ts4kp`), Polda mengimpornya. Lihat "Distribusi kunci Mabes ke Polda" di bawah.
 - **Kelola user** (khusus Admin): daftarkan user baru, verifikasi, nonaktifkan.
 - **Audit log** (khusus Admin): catatan semua aktivitas penting. Catatannya dirantai dengan hash, jadi kalau ada yang diubah atau dihapus diam-diam, tombol "Verifikasi Integritas" akan mendeteksinya.
 
@@ -83,6 +84,22 @@ dotnet run --project src/Triesoft.App
 5. **Enkripsi file** di menu **Enkripsi File**: *Pilih File...* lalu *Enkripsi*. Hasilnya `namafile.ext.ts4` di folder yang sama.
 6. **Dekripsi file** di menu **Dekripsi File**: pilih file `.ts4` lalu *Dekripsi*. Aplikasi otomatis mencari kunci yang cocok.
 
+### Distribusi kunci Mabes ke Polda
+
+Alternatif dari mengetik kunci hex. Kunci tidak pernah tampil sebagai teks, dan paket hanya bisa dibuka Polda tujuannya. Semua di menu **Distribusi Kunci** (Admin).
+
+**Persiapan sekali di awal (membangun kepercayaan):**
+1. **Mabes:** klik *Aktifkan sebagai Penerbit*, lalu *Ekspor Kunci Publik Penerbit* (file `.ts4pub`). Kirim ke tiap Polda.
+2. **Polda:** klik *Ekspor Kunci Publik Penerima*, kirim file ke Mabes.
+3. **Verifikasi sidik jari lewat jalur terpisah** (telepon atau tatap muka): masing-masing pihak membacakan sidik jarinya, yang lain mencocokkan. Ini yang mencegah penyerang menyelipkan kunci palsu.
+4. **Mabes:** *Impor Kunci Publik Polda*, cocokkan sidik jari di dialog, lalu daftarkan.
+5. **Polda:** *Impor Kunci Publik Mabes*, cocokkan sidik jari di dialog, lalu percayai.
+
+**Tiap bulan:**
+1. **Mabes:** centang Polda tujuan, isi Key ID dan masa berlaku, klik *Terbitkan Paket*, pilih folder. Hasilnya satu file `.ts4kp` per Polda.
+2. Kirim tiap file ke Polda-nya lewat saluran apa saja (email, USB). Isinya terenkripsi dan ditandatangani.
+3. **Polda:** *Pilih Paket Kunci*. Tanda tangan dan tujuan diperiksa, lalu kunci masuk sebagai Active.
+
 ### Arti status kunci
 
 | Status | Artinya |
@@ -128,6 +145,6 @@ dotnet run --project src/Triesoft.Cli -- decrypt laporan.pdf.ts4 --key-id 2026-0
 
 ## Yang belum ada
 
-- Pengiriman kunci otomatis dari Mabes ke Polda (sekarang kunci diimpor manual).
+- Rotasi atau pencabutan kunci identitas distribusi (Mabes/Polda).
 - Algoritma tambahan (ChaCha20-Poly1305, algoritma nasional BSSN, dan algoritma tahan komputer kuantum).
 - Peran Auditor terpisah dan login dua langkah (kartu pintar/OTP).
