@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Triesoft.App.Services;
 using Triesoft.Core.Audit;
+using Triesoft.Core.Bundle;
 
 namespace Triesoft.App.ViewModels;
 
@@ -49,16 +50,26 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     protected virtual string AcceptedDescription => "file";
 
     /// <summary>
+    /// Ikut menelusuri subfolder saat menambah folder (tombol Tambah Folder dan folder yang diseret). Di mode bundle, struktur
+    /// subfolder dipertahankan di dalam bundle. File tersembunyi, file sistem, dan tautan (symlink/junction) selalu dilewati.
+    /// </summary>
+    [ObservableProperty]
+    private bool _includeSubfolders = true;
+
+    /// <summary>Satu file yang akan masuk daftar, beserta folder asalnya kalau ada.</summary>
+    private sealed record PendingItem(string Path, string? GroupId, string? GroupName, string? RelativePath);
+
+    /// <summary>
     /// Drag and drop dari File Explorer: file diterima kalau <see cref="AcceptsFile"/> setuju, folder ditambahkan isinya
-    /// (tanpa subfolder, sama seperti "Tambah Folder"). Yang tidak diterima dilewati dan dilaporkan, bukan diam-diam dibuang.
-    /// Mengembalikan jumlah yang ditambahkan.
+    /// (dengan subfolder kalau <see cref="IncludeSubfolders"/> aktif). Yang tidak diterima dilewati dan dilaporkan, bukan
+    /// diam-diam dibuang. Mengembalikan jumlah yang ditambahkan.
     /// </summary>
     public int AddDropped(IEnumerable<string> paths)
     {
         if (IsBusy) return 0;
         ClearMessages();
 
-        var accepted = new List<string>();
+        var items = new List<PendingItem>();
         var skipped = 0;
         foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
         {
@@ -66,17 +77,16 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
             {
                 try
                 {
-                    var inside = Directory.EnumerateFiles(path).Where(IncludeFromFolder).Order(StringComparer.OrdinalIgnoreCase).ToList();
-                    accepted.AddRange(inside);
+                    items.AddRange(BuildFolderItems(path));
                 }
                 catch (Exception ex)
                 {
-                    ErrorMessage = ex.Message;
+                    ErrorMessage = Describe(ex);
                 }
             }
             else if (File.Exists(path) && AcceptsFile(path))
             {
-                accepted.Add(path);
+                items.Add(new PendingItem(Path.GetFullPath(path), null, null, null));
             }
             else
             {
@@ -84,9 +94,13 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
             }
         }
 
-        var added = AddFiles(accepted);
+        var errorFromFolders = ErrorMessage;
+        var added = AddItems(items);
+        NotifyListChanged();
         if (skipped > 0)
             ErrorMessage = $"{skipped} item dilewati karena bukan {AcceptedDescription}.";
+        else if (errorFromFolders is not null)
+            ErrorMessage = errorFromFolders;
         return added;
     }
 
@@ -100,30 +114,74 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     {
         if (IsBusy) return 0;
         ClearMessages();
-        var added = 0;
-        foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-            var full = Path.GetFullPath(path);
-            if (Files.Any(f => string.Equals(f.Path, full, StringComparison.OrdinalIgnoreCase))) continue;
-            Files.Add(new BatchFileItem(full, RemoveFile));
-            added++;
-        }
+        var added = AddItems(paths.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => new PendingItem(Path.GetFullPath(p), null, null, null)));
         NotifyListChanged();
         return added;
     }
 
-    /// <summary>Menambah semua file di satu folder (tanpa subfolder).</summary>
+    /// <summary>
+    /// Menambah semua file di satu folder, beserta subfoldernya kalau <see cref="IncludeSubfolders"/> aktif. Kalau ada folder atau
+    /// file yang tidak bisa dibaca, tidak ada yang ditambahkan dan alasannya ditampilkan: daftar yang diam-diam tidak lengkap
+    /// berbahaya untuk bundle.
+    /// </summary>
     public int AddFolder(string folderPath)
     {
+        if (IsBusy) return 0;
+        ClearMessages();
         try
         {
-            return AddFiles(Directory.EnumerateFiles(folderPath).Where(IncludeFromFolder).Order(StringComparer.OrdinalIgnoreCase));
+            var added = AddItems(BuildFolderItems(folderPath));
+            NotifyListChanged();
+            return added;
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = Describe(ex);
             return 0;
         }
+    }
+
+    /// <summary>Menelusuri satu folder. Semua atau tidak sama sekali: kesalahan akses melempar exception, bukan dilewati diam-diam.</summary>
+    private List<PendingItem> BuildFolderItems(string folderPath)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folderPath));
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = IncludeSubfolders,
+            IgnoreInaccessible = false,
+            ReturnSpecialDirectories = false,
+            // Tautan (symlink/junction) dilewati supaya tidak berputar atau keluar dari folder yang dipilih.
+            AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
+        };
+
+        var files = Directory.EnumerateFiles(root, "*", options)
+            .Where(IncludeFromFolder)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var groupId = Guid.NewGuid().ToString("N");
+        var name = Path.GetFileName(root);
+        var groupName = BundleNames.Sanitize(name.Length > 0 ? name : "folder");
+        return files.Select(f => new PendingItem(f, groupId, groupName, RelativeInGroup(root, f))).ToList();
+    }
+
+    /// <summary>Path relatif file terhadap folder induknya, dipisah "/", tiap komponen dibersihkan agar valid di dalam bundle.</summary>
+    private static string RelativeInGroup(string root, string file) =>
+        string.Join('/', Path.GetRelativePath(root, file)
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Select(BundleNames.Sanitize));
+
+    private int AddItems(IEnumerable<PendingItem> items)
+    {
+        var existing = new HashSet<string>(Files.Select(f => f.Path), StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+        foreach (var item in items)
+        {
+            if (!existing.Add(item.Path)) continue;
+            Files.Add(new BatchFileItem(item.Path, RemoveFile, item.GroupId, item.GroupName, item.RelativePath));
+            added++;
+        }
+        return added;
     }
 
     private void RemoveFile(BatchFileItem item)

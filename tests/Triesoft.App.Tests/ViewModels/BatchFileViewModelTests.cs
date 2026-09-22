@@ -72,16 +72,129 @@ public class BatchFileViewModelTests : IDisposable
         Write("folder/a.txt", "a");
         Write("folder/b.pdf", "b");
         Write("folder/c.ts4", "c");
-        Write("folder/sub/d.txt", "d"); // subfolder tidak ikut
+        Write("folder/sub/d.txt", "d"); // hanya ikut kalau subfolder disertakan
 
         var enc = NewEncrypt();
+        enc.IncludeSubfolders = false;
         Assert.Equal(2, enc.AddFolder(Path.Combine(_workDir, "folder")));
         Assert.DoesNotContain(enc.Files, f => f.FileName.EndsWith(".ts4"));
 
         var dec = NewDecrypt();
+        dec.IncludeSubfolders = false;
         Assert.Equal(1, dec.AddFolder(Path.Combine(_workDir, "folder")));
         Assert.Equal("c.ts4", dec.Files.Single().FileName);
     }
+
+    // --- subfolder ----------------------------------------------------------------------------------
+
+    [Fact]
+    public void AddFolder_IncludesSubfoldersByDefault_WithRelativePathsInsideTheFolderName()
+    {
+        Write("Laporan/a.txt", "a");
+        Write("Laporan/sub/b.txt", "b");
+        Write("Laporan/sub/deep/c.txt", "c");
+        Write("Laporan/sub/deep/sudah.ts4", "x"); // .ts4 tetap dilewati untuk enkripsi
+        var vm = NewEncrypt();
+
+        Assert.True(vm.IncludeSubfolders);
+        Assert.Equal(3, vm.AddFolder(P("Laporan")));
+
+        Assert.Equal(["Laporan/a.txt", "Laporan/sub/b.txt", "Laporan/sub/deep/c.txt"], vm.Files.Select(f => f.DisplayName).Order());
+        Assert.All(vm.Files, f =>
+        {
+            Assert.Equal("Laporan", f.GroupName);
+            Assert.NotNull(f.GroupId);
+        });
+        Assert.Single(vm.Files.Select(f => f.GroupId).Distinct());
+        Assert.Equal("sub/deep/c.txt", vm.Files.Single(f => f.FileName == "c.txt").RelativePath);
+    }
+
+    [Fact]
+    public void AddFolder_SingleFilesHaveNoGroup_AndAreShownByFileName()
+    {
+        var vm = NewEncrypt();
+        vm.AddFiles([Write("lepas/x.txt", "x")]);
+
+        var item = vm.Files.Single();
+        Assert.Null(item.GroupId);
+        Assert.Null(item.RelativePath);
+        Assert.Equal("x.txt", item.DisplayName);
+    }
+
+    [Fact]
+    public void AddFolder_Dropped_FollowsTheSameSubfolderRule_AndDecryptStillTakesOnlyTs4()
+    {
+        Write("kotak/a.ts4", "a");
+        Write("kotak/tengah/b.ts4", "b");
+        Write("kotak/tengah/catatan.txt", "bukan .ts4");
+        var vm = NewDecrypt();
+
+        var added = vm.AddDropped([P("kotak")]);
+
+        Assert.Equal(2, added);
+        Assert.Equal(["kotak/a.ts4", "kotak/tengah/b.ts4"], vm.Files.Select(f => f.DisplayName).Order());
+    }
+
+    [Fact]
+    public void AddFolder_AddingSameFolderTwice_DoesNotDuplicate()
+    {
+        Write("f/a.txt", "a");
+        Write("f/s/b.txt", "b");
+        var vm = NewEncrypt();
+
+        Assert.Equal(2, vm.AddFolder(P("f")));
+        Assert.Equal(0, vm.AddFolder(P("f")));
+        Assert.Equal(2, vm.Files.Count);
+    }
+
+    [Fact]
+    public void AddFolder_EmptyOrMissingFolder_AddsNothing()
+    {
+        Directory.CreateDirectory(P("kosong/anak"));
+        var vm = NewEncrypt();
+
+        Assert.Equal(0, vm.AddFolder(P("kosong")));
+        Assert.Empty(vm.Files);
+
+        Assert.Equal(0, vm.AddFolder(P("tidak-ada")));
+        Assert.NotNull(vm.ErrorMessage);
+        Assert.Empty(vm.Files);
+    }
+
+    [Fact]
+    public void AddFolder_SkipsHiddenFilesAndFolders_OnWindows()
+    {
+        if (!OperatingSystem.IsWindows()) return; // atribut Hidden hanya berarti di Windows
+
+        Write("h/terlihat.txt", "1");
+        var hiddenFile = Write("h/rahasia.txt", "2");
+        File.SetAttributes(hiddenFile, FileAttributes.Hidden);
+        var hiddenDir = Directory.CreateDirectory(P("h/.git"));
+        Write("h/.git/config", "3");
+        hiddenDir.Attributes |= FileAttributes.Hidden;
+        var vm = NewEncrypt();
+
+        vm.AddFolder(P("h"));
+
+        Assert.Equal(["h/terlihat.txt"], vm.Files.Select(f => f.DisplayName));
+    }
+
+    [Fact]
+    public async Task PerFileMode_WithSubfolders_EncryptsEachFileNextToItself()
+    {
+        var a = Write("Tree/a.txt", "a");
+        var b = Write("Tree/sub/b.txt", "b");
+        var vm = NewEncrypt();
+        vm.AddFolder(P("Tree"));
+
+        await vm.EncryptCommand.ExecuteAsync(null);
+
+        Assert.True(File.Exists(a + ".ts4"));
+        Assert.True(File.Exists(b + ".ts4")); // di subfolder aslinya, bukan diratakan
+        Assert.All(vm.Files, f => Assert.Equal(BatchStatus.Succeeded, f.Status));
+    }
+
+    private string P(string relative) => Path.GetFullPath(Path.Combine(_workDir, relative));
 
     // --- drag and drop ------------------------------------------------------------------------------
 

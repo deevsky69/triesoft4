@@ -258,7 +258,7 @@ public class BundleTests : IDisposable
         Assert.Throws<InvalidDataException>(() => Extract(Raw([("a.txt", [1])], trailer: false), out _)); // tanpa penutup
         Assert.Throws<InvalidDataException>(() => Extract(Raw([("a.txt", [1])], count: 2), out _));       // jumlah tidak cocok
         Assert.Throws<InvalidDataException>(() => Extract(Raw([("a.txt", [1])], extra: [9]), out _));     // data tambahan
-        Assert.Throws<InvalidDataException>(() => Extract(Raw([("a.txt", [1])], version: 2), out _));     // versi asing
+        Assert.Throws<InvalidDataException>(() => Extract(Raw([("a.txt", [1])], version: 3), out _));     // versi asing
         Assert.Throws<InvalidDataException>(() => Extract("bukan bundle sama sekali"u8.ToArray(), out _));
         Assert.Throws<InvalidDataException>(() => Extract([], out _));
     }

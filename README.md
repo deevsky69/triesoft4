@@ -81,14 +81,15 @@ dotnet run --project src/Triesoft.App
 
    Lalu klik **Impor**. Kunci baru otomatis jadi kunci aktif, dan kunci bulan lalu berubah jadi *Expired* (tidak dipakai untuk enkripsi baru, tapi masih bisa membuka arsip lama).
 4. **Daftarkan user lain** di menu **Kelola User**. User baru berstatus *PendingVerification*. Klik **Verifikasi** supaya ia bisa masuk.
-5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu, tanpa subfolder), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
+5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu; subfolder ikut kalau kotak *Sertakan subfolder* dicentang, yang bawaannya aktif), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
 6. **Dekripsi file** di menu **Dekripsi File**: tambahkan file `.ts4` dengan cara yang sama lalu *Dekripsi Semua*. Aplikasi otomatis mencari kunci yang cocok untuk tiap file.
 
 Selain lewat tombol, file dan folder bisa **diseret dari File Explorer** ke kartu Enkripsi atau Dekripsi (kartu berubah biru saat siap menerima). Di Dekripsi, item yang bukan `.ts4` dilewati dan dilaporkan.
 
-**Bundle (banyak file jadi satu `.ts4`):** centang *Gabungkan semua file menjadi satu file .ts4*, isi *Nama bundle*, pilih folder tujuan (bawaannya folder file pertama), lalu klik *Buat Bundle*. Hasilnya satu file `nama-bundle.ts4` (kalau namanya sudah ada, dibuat `nama-bundle (2).ts4`, tidak pernah menimpa). Saat didekripsi lewat menu Dekripsi File, bundle dikenali otomatis dan semua isinya keluar di **folder baru** bernama sama di sebelah file `.ts4`.
+**Bundle (banyak file jadi satu `.ts4`):** centang *Gabungkan semua file menjadi satu file .ts4*, isi *Nama bundle*, pilih folder tujuan (bawaannya: di samping folder yang Anda tambahkan, atau folder file tunggal pertama), lalu klik *Buat Bundle*. Hasilnya satu file `nama-bundle.ts4` (kalau namanya sudah ada, dibuat `nama-bundle (2).ts4`, tidak pernah menimpa). Saat didekripsi lewat menu Dekripsi File, bundle dikenali otomatis dan semua isinya keluar di **folder baru** bernama sama di sebelah file `.ts4`.
 - **Bundle bersifat semua-atau-tidak-sama-sekali:** kalau ada satu file yang tidak bisa dibaca, bundle tidak dibuat dan daftar menunjukkan file mana yang bermasalah. Ini disengaja supaya tidak ada bundle yang diam-diam kehilangan berkas.
-- File dengan nama yang sama dari folder berbeda otomatis diberi nama `nama (2).ext` di dalam bundle. Subfolder belum didukung (tambah folder hanya mengambil file di tingkat teratas).
+- **Subfolder:** kalau Anda menambahkan sebuah folder, struktur subfoldernya ikut masuk ke bundle dengan nama folder itu sebagai induk (mis. `Operasi/lampiran/peta/lokasi.jpg`), dan dipulihkan persis saat didekripsi. File yang dipilih satu per satu ditaruh langsung di akar bundle. Dari folder, **file tersembunyi, file sistem, tautan (symlink), dan folder kosong dilewati**. Batas: 32 tingkat folder dan 1.024 karakter per path.
+- Nama yang sama tidak digabung: dua folder bernama sama dari tempat berbeda menjadi `Data` dan `Data (2)` di dalam bundle, dan file lepas dengan nama yang sama diberi `nama (2).ext`.
 - Isi bundle dicatat di audit log (nama file, jumlah, dan kunci yang dipakai).
 - Keamanan saat membuka: isi bundle baru diekstrak setelah seluruh file lolos autentikasi, nama entri yang berbahaya (`..\`, path absolut, `CON`, dll) ditolak, dan kalau ada masalah tidak ada folder atau file setengah jadi yang tersisa.
 

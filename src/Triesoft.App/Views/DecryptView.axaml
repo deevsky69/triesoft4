@@ -17,7 +17,11 @@
                         IsVisible="{Binding HasFiles}" IsEnabled="{Binding !IsBusy}" />
             </StackPanel>
 
-            <TextBlock Classes="caption" Text="Atau seret file .ts4 dan folder dari File Explorer ke sini." />
+            <CheckBox IsChecked="{Binding IncludeSubfolders}" IsEnabled="{Binding !IsBusy}"
+                      Content="Sertakan subfolder saat menambah folder" />
+
+            <TextBlock Classes="caption" TextWrapping="Wrap"
+                       Text="Atau seret file .ts4 dan folder dari File Explorer ke sini. Dari folder, file tersembunyi dan tautan (symlink) dilewati." />
 
             <TextBlock Text="{Binding FileCountText}" Classes="caption" />
 

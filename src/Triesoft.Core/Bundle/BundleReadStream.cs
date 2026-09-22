@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Triesoft.Core.Bundle;
 
-/// <summary>Satu file yang masuk bundle: path sumber dan nama entri di dalam bundle.</summary>
+/// <summary>Satu file yang masuk bundle: path sumber dan path entri di dalam bundle ("nama.txt" atau "folder/sub/nama.txt").</summary>
 public sealed record BundleSource(string Path, string EntryName);
 
 /// <summary>
@@ -22,6 +22,7 @@ public sealed class BundleReadStream : Stream
     private readonly IReadOnlyList<BundleSource> _sources;
     private readonly CancellationToken _cancellation;
     private readonly long _length;
+    private readonly byte _version;
 
     private long _position;
     private int _next;
@@ -43,20 +44,37 @@ public sealed class BundleReadStream : Stream
         if (sources.Count > BundleFormat.MaxEntries) throw new ArgumentException("Terlalu banyak file dalam satu bundle.", nameof(sources));
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var version = BundleFormat.VersionFlat;
         long length = BundleFormat.Magic.Length + 1 + 1 + 4;
         foreach (var source in sources)
         {
-            if (BundleNames.ValidateEntryName(source.EntryName) is { } problem)
+            if (BundleNames.ValidateEntryPath(source.EntryName) is { } problem)
                 throw new ArgumentException($"Nama entri '{source.EntryName}' tidak valid: {problem}.", nameof(sources));
             if (!seen.Add(source.EntryName))
                 throw new ArgumentException($"Nama entri '{source.EntryName}' dipakai dua kali.", nameof(sources));
+            if (source.EntryName.Contains('/')) version = BundleFormat.VersionSubfolders;
+
+            // Sebuah nama tidak boleh sekaligus file dan folder ("a" dan "a/b.txt"): hasil ekstraksinya mustahil.
+            files.Add(source.EntryName);
+            var slash = source.EntryName.LastIndexOf('/');
+            while (slash > 0)
+            {
+                folders.Add(source.EntryName[..slash]);
+                slash = source.EntryName.LastIndexOf('/', slash - 1);
+            }
 
             length += 1 + 2 + Encoding.UTF8.GetByteCount(source.EntryName) + 8 + new FileInfo(source.Path).Length;
         }
 
+        if (files.FirstOrDefault(folders.Contains) is { } clash)
+            throw new ArgumentException($"'{clash}' dipakai sebagai nama file sekaligus nama folder.", nameof(sources));
+
         _sources = sources;
         _cancellation = cancellation;
         _length = length;
+        _version = version;
     }
 
     public override bool CanRead => true;
@@ -119,7 +137,7 @@ public sealed class BundleReadStream : Stream
         if (!_preambleWritten)
         {
             _preambleWritten = true;
-            SetPending([.. BundleFormat.Magic, BundleFormat.Version]);
+            SetPending([.. BundleFormat.Magic, _version]);
             return true;
         }
 

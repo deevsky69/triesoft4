@@ -5,9 +5,10 @@ namespace Triesoft.Core.Bundle;
 
 /// <summary>
 /// Mengekstrak isi bundle (lihat <see cref="BundleFormat"/>) ke satu folder. Dipanggil HANYA setelah seluruh .ts4
-/// lolos autentikasi -- tapi tetap memperlakukan isinya sebagai tidak tepercaya: nama entri divalidasi ketat
-/// (<see cref="BundleNames.ValidateEntryName"/>), file tidak pernah menimpa apa pun (<c>CreateNew</c>), jumlah entri dibatasi,
-/// dan struktur harus utuh sampai penutup tanpa data tambahan.
+/// lolos autentikasi -- tapi tetap memperlakukan isinya sebagai tidak tepercaya: path entri divalidasi ketat per komponen
+/// (<see cref="BundleNames.ValidateEntryPath"/>; versi 1 hanya menerima nama datar), file tidak pernah menimpa apa pun
+/// (<c>CreateNew</c>), jumlah entri dan kedalaman dibatasi, nama tidak boleh sekaligus file dan folder, dan struktur harus utuh
+/// sampai penutup tanpa data tambahan.
 /// </summary>
 public static class BundleExtractor
 {
@@ -34,8 +35,8 @@ public static class BundleExtractor
 
     /// <summary>
     /// Menulis tiap entri sebagai file di <paramref name="destinationDirectory"/> (harus sudah ada, sebaiknya folder kosong
-    /// yang baru dibuat). Melempar <see cref="InvalidDataException"/> kalau bundle rusak atau tidak aman; pemanggil harus
-    /// membuang folder tujuan kalau ini terjadi. Mengembalikan nama file yang ditulis.
+    /// yang baru dibuat), membuat subfolder yang dibutuhkan. Melempar <see cref="InvalidDataException"/> kalau bundle rusak
+    /// atau tidak aman; pemanggil harus membuang folder tujuan kalau ini terjadi. Mengembalikan path relatif ("/") file yang ditulis.
     /// </summary>
     public static IReadOnlyList<string> Extract(Stream input, string destinationDirectory, CancellationToken cancellation = default)
     {
@@ -56,15 +57,20 @@ public static class BundleExtractor
 
     private static List<string> ExtractCore(Stream input, string destination, CancellationToken cancellation)
     {
+        var destinationRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination));
+
         Span<byte> preamble = stackalloc byte[5];
         input.ReadExactly(preamble);
         if (!preamble[..4].SequenceEqual(BundleFormat.Magic))
             throw new InvalidDataException("Isi file ini bukan bundle TRIESOFT.");
-        if (preamble[4] != BundleFormat.Version)
-            throw new InvalidDataException($"Versi bundle {preamble[4]} tidak didukung.");
+        var version = preamble[4];
+        if (version is not (BundleFormat.VersionFlat or BundleFormat.VersionSubfolders))
+            throw new InvalidDataException($"Versi bundle {version} tidak didukung.");
+        var allowSubfolders = version == BundleFormat.VersionSubfolders;
 
         var names = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var buffer = new byte[81920];
 
         // Dialokasikan sekali di luar loop (CA2014: stackalloc di dalam loop bisa stack overflow untuk bundle besar).
@@ -100,18 +106,29 @@ public static class BundleExtractor
             var nameBytes = new byte[nameLength];
             input.ReadExactly(nameBytes);
             var name = StrictUtf8.GetString(nameBytes);
-            if (BundleNames.ValidateEntryName(name) is { } problem)
+
+            // Versi 1 = nama datar saja; versi 2 = path bersubfolder. Aturan tiap komponen sama.
+            var problem = allowSubfolders ? BundleNames.ValidateEntryPath(name) : BundleNames.ValidateEntryName(name);
+            if (problem is not null)
                 throw new InvalidDataException($"Bundle ditolak: nama entri '{name}' tidak aman ({problem}).");
-            if (!seen.Add(name))
+            if (!files.Add(name))
                 throw new InvalidDataException($"Bundle ditolak: nama entri '{name}' muncul dua kali.");
+            RegisterFolders(name, files, folders);
 
             input.ReadExactly(scratch);
             var size = BinaryPrimitives.ReadUInt64LittleEndian(scratch);
             if (input.CanSeek && size > (ulong)(input.Length - input.Position))
                 throw new InvalidDataException($"Bundle terpotong: entri '{name}' lebih besar dari sisa data.");
 
-            // CreateNew: tidak pernah menimpa. Nama sudah divalidasi datar, jadi tidak bisa keluar dari folder tujuan.
-            using (var output = new FileStream(Path.Combine(destination, name), FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            var targetPath = Path.GetFullPath(Path.Combine(destinationRoot, name.Replace('/', Path.DirectorySeparatorChar)));
+            // Pertahanan berlapis: nama sudah divalidasi, tapi hasil akhirnya tetap harus berada di bawah folder tujuan.
+            if (!targetPath.StartsWith(destinationRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"Bundle ditolak: nama entri '{name}' keluar dari folder tujuan.");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+
+            // CreateNew: tidak pernah menimpa. Folder tujuan baru dan kosong, jadi setiap file yang sudah ada berarti masalah.
+            using (var output = new FileStream(targetPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 var remaining = size;
                 while (remaining > 0)
@@ -124,6 +141,26 @@ public static class BundleExtractor
             }
 
             names.Add(name);
+        }
+    }
+
+    /// <summary>
+    /// Mencatat folder induk sebuah path dan menolak konflik: sebuah nama tidak boleh sekaligus file dan folder
+    /// ("a" lalu "a/b.txt", atau "a/b.txt" lalu "a"). Tanpa ini ekstraksi gagal dengan error IO yang membingungkan.
+    /// </summary>
+    private static void RegisterFolders(string path, HashSet<string> files, HashSet<string> folders)
+    {
+        if (folders.Contains(path))
+            throw new InvalidDataException($"Bundle ditolak: '{path}' dipakai sebagai nama file sekaligus nama folder.");
+
+        var slash = path.LastIndexOf('/');
+        while (slash > 0)
+        {
+            var parent = path[..slash];
+            if (files.Contains(parent))
+                throw new InvalidDataException($"Bundle ditolak: '{parent}' dipakai sebagai nama file sekaligus nama folder.");
+            folders.Add(parent);
+            slash = path.LastIndexOf('/', slash - 1);
         }
     }
 }

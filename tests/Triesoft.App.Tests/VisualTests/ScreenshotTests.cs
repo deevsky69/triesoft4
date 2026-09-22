@@ -95,13 +95,22 @@ public class ScreenshotTests
         var shell = BuildShell(out var user);
         shell.Initialize(user);
         var work = Directory.CreateTempSubdirectory("triesoft4-shot-bundle-").FullName;
-        var files = new[] { "laporan-intel.pdf", "briefing.pptx", "foto-lokasi.jpg" }.Select(n => Path.Combine(work, n)).ToList();
-        foreach (var f in files) File.WriteAllText(f, "isi " + f);
+        // satu folder bersubfolder ("Operasi") dan satu file lepas: strukturnya ikut masuk ke bundle
+        var tree = new[] { "Operasi/laporan-intel.pdf", "Operasi/lampiran/briefing.pptx", "Operasi/lampiran/peta/lokasi.jpg" };
+        foreach (var rel in tree)
+        {
+            var full = Path.Combine(work, rel.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            File.WriteAllText(full, "isi " + rel);
+        }
+        var loose = Path.Combine(work, "catatan-kirim.txt");
+        File.WriteAllText(loose, "catatan");
 
         var vm = (EncryptViewModel)shell.CurrentPage!;
         vm.BundleMode = true;
         vm.BundleName = "operasi-melati";
-        vm.AddFiles(files);
+        vm.AddFolder(Path.Combine(work, "Operasi"));
+        vm.AddFiles([loose]);
         // Dijalankan dari thread pool: lihat catatan di MainShell_EncryptBatch_Screenshot.
         Task.Run(() => vm.EncryptCommand.ExecuteAsync(null)).GetAwaiter().GetResult();
 

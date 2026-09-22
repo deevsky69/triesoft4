@@ -30,7 +30,7 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
     [NotifyPropertyChangedFor(nameof(EffectiveBundleFolder))]
     private string? _bundleOutputFolder;
 
-    public string EffectiveBundleFolder => BundleOutputFolder ?? Files.FirstOrDefault()?.Directory ?? "";
+    public string EffectiveBundleFolder => BundleOutputFolder ?? Files.FirstOrDefault()?.DefaultOutputFolder ?? "";
 
     public string RunButtonText => BundleMode ? "Buat Bundle" : "Enkripsi Semua";
 
@@ -107,18 +107,31 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
             return;
         }
 
+        if (Files.Count > BundleNames.MaxEntries)
+        {
+            ErrorMessage = $"Terlalu banyak file untuk satu bundle ({Files.Count}; maksimum {BundleNames.MaxEntries}). Bagi menjadi beberapa bundle.";
+            return;
+        }
+
         foreach (var f in Files)
         {
             f.Status = BatchStatus.Waiting;
             f.Message = "";
         }
 
-        // Pemeriksaan awal: semua file harus bisa dibuka sebelum apa pun ditulis.
+        // Path tiap file di dalam bundle: file tunggal di akar, file dari folder dengan struktur subfoldernya.
+        var entryNames = BundleNames.PlanEntryPaths(
+            Files.Select(f => new BundlePlanItem(f.GroupId, f.GroupName, f.RelativePath, f.FileName)).ToList());
+
+        // Pemeriksaan awal: setiap file harus bisa dibuka dan path-nya valid sebelum apa pun ditulis.
         var unreadable = new List<BatchFileItem>();
-        foreach (var item in Files)
+        for (var i = 0; i < Files.Count; i++)
         {
+            var item = Files[i];
             try
             {
+                if (BundleNames.ValidateEntryPath(entryNames[i]) is { } pathProblem)
+                    throw new InvalidOperationException($"Path di dalam bundle tidak valid ({pathProblem}): {entryNames[i]}");
                 using var probe = new FileStream(item.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
             }
             catch (Exception ex)
@@ -142,7 +155,6 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
             return;
         }
 
-        var entryNames = BundleNames.MakeUnique(Files.Select(f => BundleNames.Sanitize(f.FileName)));
         var sources = Files.Zip(entryNames, (f, name) => new BundleSource(f.Path, name)).ToList();
         var outputPath = FirstFreeBundlePath(folder, bundleName);
 

@@ -8,7 +8,7 @@
                  Fill="{Binding Status, Converter={StaticResource BatchStatusToBrushConverter}}"
                  VerticalAlignment="Center" />
         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-            <TextBlock Text="{Binding FileName}" Classes="body" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding DisplayName}" Classes="body" TextTrimming="CharacterEllipsis" />
             <TextBlock Text="{Binding Directory}" Classes="caption" TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding ShowDirectory}" />
             <TextBlock Text="{Binding ResultText}" Classes="caption" TextWrapping="Wrap"

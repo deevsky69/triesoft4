@@ -17,7 +17,11 @@
                         IsVisible="{Binding HasFiles}" IsEnabled="{Binding !IsBusy}" />
             </StackPanel>
 
-            <TextBlock Classes="caption" Text="Atau seret file dan folder dari File Explorer ke sini." />
+            <CheckBox IsChecked="{Binding IncludeSubfolders}" IsEnabled="{Binding !IsBusy}"
+                      Content="Sertakan subfolder saat menambah folder" />
+
+            <TextBlock Classes="caption" TextWrapping="Wrap"
+                       Text="Atau seret file dan folder dari File Explorer ke sini. Dari folder, file tersembunyi, file sistem, tautan (symlink), dan folder kosong dilewati." />
 
             <CheckBox IsChecked="{Binding BundleMode}" IsEnabled="{Binding !IsBusy}"
                       Content="Gabungkan semua file menjadi satu file .ts4 (bundle)" />
@@ -37,7 +41,7 @@
                     </Grid>
                 </StackPanel>
                 <TextBlock Classes="caption" TextWrapping="Wrap"
-                           Text="Semua file masuk ke satu file terenkripsi. Kalau ada satu file yang tidak bisa dibaca, bundle tidak dibuat sama sekali. Saat didekripsi, isinya keluar di folder baru bernama sama dengan bundle." />
+                           Text="Semua file masuk ke satu file terenkripsi, dengan struktur subfolder dari folder yang Anda tambahkan. Kalau ada satu file yang tidak bisa dibaca, bundle tidak dibuat sama sekali. Saat didekripsi, isinya keluar di folder baru bernama sama dengan bundle." />
             </StackPanel>
 
             <TextBlock Text="{Binding FileCountText}" Classes="caption" />

@@ -322,7 +322,7 @@ public class BundleViewModelTests : IDisposable
     public async Task Bundle_Decrypt_MaliciousBundle_IsRejected_WithNothingWrittenAnywhere()
     {
         // Pengirim yang memegang kunci sah membuat bundle dengan nama entri berbahaya (mis. lewat alat sendiri).
-        var evil = RawBundle(("aman.txt", "ok"u8.ToArray()), ("..\\..\\keluar.txt", "jahat"u8.ToArray()));
+        var evil = RawBundle(1, ("aman.txt", "ok"u8.ToArray()), ("..\\..\\keluar.txt", "jahat"u8.ToArray()));
         var dir = Directory.CreateDirectory(P("kotak")).FullName;
         using (var kek = _keys.GetActiveKeyForEncryption())
         using (var output = File.Create(Path.Combine(dir, "jahat.ts4")))
@@ -357,11 +357,162 @@ public class BundleViewModelTests : IDisposable
         Assert.Equal("isi biasa", File.ReadAllText(Path.Combine(dir, "catatan.ts4bundle")));
     }
 
-    private static byte[] RawBundle(params (string Name, byte[] Data)[] entries)
+    // --- subfolder di dalam bundle -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Bundle_WithFolderTree_RoundTripsWithStructure_AndAuditListsPaths()
+    {
+        Write("Laporan/a.txt", "isi a");
+        Write("Laporan/sub/b.txt", "isi b");
+        Write("Laporan/sub/deep/c.txt", "isi c");
+        var lepas = Write("lepas/lepas.pdf", "isi lepas");
+        var enc = NewEncrypt("misi");
+        enc.BundleOutputFolder = Directory.CreateDirectory(P("hasil")).FullName;
+        enc.AddFolder(P("Laporan"));
+        enc.AddFiles([lepas]);
+
+        await enc.EncryptCommand.ExecuteAsync(null);
+
+        Assert.Null(enc.ErrorMessage);
+        Assert.Contains("4 file berhasil dibuat", enc.SuccessMessage);
+        var entry = Assert.Single(_audit.ReadAll(), e => e.Action == AuditAction.FileEncrypted);
+        Assert.Contains("Laporan/a.txt", entry.Details);
+        Assert.Contains("Laporan/sub/deep/c.txt", entry.Details);
+
+        Directory.Delete(P("Laporan"), recursive: true);
+        File.Delete(lepas);
+        var dec = NewDecrypt();
+        dec.AddFiles([P("hasil/misi.ts4")]);
+        await dec.DecryptCommand.ExecuteAsync(null);
+
+        Assert.Null(dec.ErrorMessage);
+        var root = P("hasil/misi");
+        Assert.Equal("isi a", File.ReadAllText(Path.Combine(root, "Laporan", "a.txt")));
+        Assert.Equal("isi b", File.ReadAllText(Path.Combine(root, "Laporan", "sub", "b.txt")));
+        Assert.Equal("isi c", File.ReadAllText(Path.Combine(root, "Laporan", "sub", "deep", "c.txt")));
+        Assert.Equal("isi lepas", File.ReadAllText(Path.Combine(root, "lepas.pdf")));
+        Assert.Contains("4 file", _audit.ReadAll()[^1].Details);
+        Assert.True(_audit.VerifyChain().IsIntact);
+    }
+
+    [Fact]
+    public void Bundle_DefaultFolder_IsNextToTheAddedFolder_NotInsideASubfolder()
+    {
+        Write("Proyek/lampiran/peta/lokasi.jpg", "1"); // file pertama (urut) ada dua tingkat di dalam
+        Write("Proyek/zzz.txt", "2");
+        var vm = NewEncrypt();
+
+        vm.AddFolder(P("Proyek"));
+        Assert.Equal("lokasi.jpg", vm.Files[0].FileName);
+        Assert.Equal(P("."), vm.EffectiveBundleFolder); // induk dari "Proyek", yaitu folder kerja
+
+        vm.ClearFilesCommand.Execute(null);
+        vm.AddFiles([Write("lepas/x.txt", "x")]);
+        Assert.Equal(P("lepas"), vm.EffectiveBundleFolder); // file tunggal: foldernya sendiri
+    }
+
+    [Fact]
+    public async Task Bundle_TwoFoldersWithSameNameFromDifferentPlaces_StaySeparate()
+    {
+        Write("x/Data/a.txt", "dari x");
+        Write("y/Data/a.txt", "dari y");
+        var enc = NewEncrypt("dua");
+        enc.BundleOutputFolder = Directory.CreateDirectory(P("hasil")).FullName;
+        enc.AddFolder(P("x/Data"));
+        enc.AddFolder(P("y/Data"));
+
+        await enc.EncryptCommand.ExecuteAsync(null);
+        var dec = NewDecrypt();
+        dec.AddFiles([P("hasil/dua.ts4")]);
+        await dec.DecryptCommand.ExecuteAsync(null);
+
+        Assert.Equal("dari x", File.ReadAllText(P("hasil/dua/Data/a.txt")));
+        Assert.Equal("dari y", File.ReadAllText(P("hasil/dua/Data (2)/a.txt")));
+    }
+
+    [Fact]
+    public async Task Bundle_FileAndFolderWithSameName_DoNotClash()
+    {
+        var lepas = Write("lepas/Laporan", "file tanpa ekstensi");
+        Write("Laporan/a.txt", "dalam folder");
+        var enc = NewEncrypt("bentrok");
+        enc.BundleOutputFolder = Directory.CreateDirectory(P("hasil")).FullName;
+        enc.AddFiles([lepas]);
+        enc.AddFolder(P("Laporan"));
+
+        await enc.EncryptCommand.ExecuteAsync(null);
+        var dec = NewDecrypt();
+        dec.AddFiles([P("hasil/bentrok.ts4")]);
+        await dec.DecryptCommand.ExecuteAsync(null);
+
+        Assert.Equal("file tanpa ekstensi", File.ReadAllText(P("hasil/bentrok/Laporan")));
+        Assert.Equal("dalam folder", File.ReadAllText(P("hasil/bentrok/Laporan (2)/a.txt")));
+    }
+
+    [Fact]
+    public async Task Bundle_PathDeeperThanAllowed_IsCaughtBeforeAnythingIsWritten()
+    {
+        var deep = "Dalam";
+        for (var i = 0; i < BundleNames.MaxDepth + 2; i++) deep += "/d";
+        Write(deep + "/berkas.txt", "terlalu dalam");
+        var enc = NewEncrypt("dalam");
+        enc.BundleOutputFolder = Directory.CreateDirectory(P("hasil")).FullName;
+        enc.AddFolder(P("Dalam"));
+
+        await enc.EncryptCommand.ExecuteAsync(null);
+
+        Assert.Equal(BatchStatus.Failed, enc.Files.Single().Status);
+        Assert.Contains("Path di dalam bundle tidak valid", enc.Files.Single().Message);
+        Assert.Contains("Bundle tidak dibuat", enc.ErrorMessage);
+        Assert.Empty(Directory.GetFiles(P("hasil")));
+    }
+
+    [Fact]
+    public async Task Bundle_WithoutSubfolders_OnlyTopLevelFilesEnterTheBundle()
+    {
+        Write("Laporan/a.txt", "a");
+        Write("Laporan/sub/b.txt", "b");
+        var enc = NewEncrypt("datar");
+        enc.IncludeSubfolders = false;
+        enc.BundleOutputFolder = Directory.CreateDirectory(P("hasil")).FullName;
+        enc.AddFolder(P("Laporan"));
+        await enc.EncryptCommand.ExecuteAsync(null);
+
+        var dec = NewDecrypt();
+        dec.AddFiles([P("hasil/datar.ts4")]);
+        await dec.DecryptCommand.ExecuteAsync(null);
+
+        Assert.Equal(["a.txt"], Directory.GetFileSystemEntries(P("hasil/datar/Laporan")).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task Bundle_Decrypt_MaliciousNestedPaths_AreRejected_WithNothingWrittenAnywhere()
+    {
+        foreach (var evilPath in new[] { "a/../../keluar.txt", "/mutlak.txt", "a//b.txt", "dok/CON/x.txt", "a\\..\\..\\keluar.txt" })
+        {
+            var dir = Directory.CreateDirectory(P("kotak-" + Guid.NewGuid().ToString("N")[..6])).FullName;
+            var evil = RawBundle(2, ("aman/ok.txt", "ok"u8.ToArray()), (evilPath, "jahat"u8.ToArray()));
+            using (var kek = _keys.GetActiveKeyForEncryption())
+            using (var output = File.Create(Path.Combine(dir, "jahat.ts4")))
+                EnvelopeCipher.Encrypt(new MemoryStream(evil), output, kek, "jahat" + BundleNames.Extension);
+
+            var dec = NewDecrypt();
+            dec.AddFiles([Path.Combine(dir, "jahat.ts4")]);
+            await dec.DecryptCommand.ExecuteAsync(null);
+
+            Assert.Equal(BatchStatus.Failed, dec.Files.Single().Status);
+            Assert.Contains("tidak aman", dec.Files.Single().Message);
+            Assert.Equal(["jahat.ts4"], Directory.GetFileSystemEntries(dir).Select(Path.GetFileName)); // tidak ada folder/staging tersisa
+        }
+        Assert.False(File.Exists(P("keluar.txt")));
+        Assert.False(File.Exists(P("mutlak.txt")));
+    }
+
+    private static byte[] RawBundle(byte version, params (string Name, byte[] Data)[] entries)
     {
         using var ms = new MemoryStream();
         ms.Write("TS4B"u8);
-        ms.WriteByte(1);
+        ms.WriteByte(version);
         foreach (var (name, data) in entries)
         {
             var nameBytes = Encoding.UTF8.GetBytes(name);
