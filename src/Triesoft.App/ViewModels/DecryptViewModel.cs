@@ -45,7 +45,7 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
 
             // Sampai di sini SELURUH file sudah lolos autentikasi. Bundle baru dibuka setelah itu, tidak pernah selagi mengalir.
             if (BundleNames.IsBundleFileName(result.OriginalFileName) && LooksLikeBundle(tempPath))
-                return ExtractBundle(tempPath, directory, inputPath, result.OriginalFileName, producedThisRun);
+                return ExtractBundle(tempPath, directory, inputPath, result.OriginalFileName, result.Profile, producedThisRun);
 
             // Nama asli datang dari header terdekripsi. Hanya komponen nama file yang dipakai, jadi header yang memuat
             // "..\..\x" atau path absolut tidak bisa menulis keluar dari folder file .ts4 ini.
@@ -57,7 +57,8 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
             // sebelum proses tetap ditimpa seperti perilaku lama (mis. mendekripsi salinan dari file asli yang masih ada).
             var destinationPath = UniquePath(directory, safeName, producedThisRun);
             File.Move(tempPath, destinationPath, overwrite: true);
-            return new BatchFileResult(destinationPath, $"file={Path.GetFileName(inputPath)} -> {Path.GetFileName(destinationPath)}");
+            return new BatchFileResult(destinationPath,
+                $"file={Path.GetFileName(inputPath)} -> {Path.GetFileName(destinationPath)}, algoritma={result.Profile}");
         }
         finally
         {
@@ -71,7 +72,7 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
     /// Mengekstrak bundle ke folder staging dulu, baru dipindah ke folder bernama bundle. Kalau bundle ditolak atau gagal
     /// di tengah, staging dibuang seluruhnya: tidak ada hasil setengah jadi. Folder tujuan yang sudah ada tidak pernah digabung.
     /// </summary>
-    private static BatchFileResult ExtractBundle(string plaintextPath, string directory, string inputPath, string bundleFileName, ISet<string> producedThisRun)
+    private static BatchFileResult ExtractBundle(string plaintextPath, string directory, string inputPath, string bundleFileName, AlgorithmProfile profile, ISet<string> producedThisRun)
     {
         var target = UniqueDirectory(directory, BundleNames.FolderNameFor(bundleFileName), producedThisRun);
         var staging = Path.Combine(directory, Path.GetRandomFileName());
@@ -84,7 +85,7 @@ public partial class DecryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
 
             Directory.Move(staging, target);
             return new BatchFileResult(target,
-                $"file={Path.GetFileName(inputPath)} -> folder {Path.GetFileName(target)} ({names.Count} file: {string.Join(" | ", names.Take(50))})");
+                $"file={Path.GetFileName(inputPath)} -> folder {Path.GetFileName(target)}, algoritma={profile} ({names.Count} file: {string.Join(" | ", names.Take(50))})");
         }
         catch
         {

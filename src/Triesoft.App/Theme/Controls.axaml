@@ -63,6 +63,20 @@
     <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
   </Style>
 
+  <Style Selector="Border.banner">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.banner-error">
+    <Setter Property="Background" Value="{StaticResource Brush.DangerSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Danger}" />
+  </Style>
+  <Style Selector="Border.banner-success">
+    <Setter Property="Background" Value="{StaticResource Brush.SuccessSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Success}" />
+  </Style>
+
   <Style Selector="TextBlock.error-text">
     <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
     <Setter Property="FontSize" Value="13" />

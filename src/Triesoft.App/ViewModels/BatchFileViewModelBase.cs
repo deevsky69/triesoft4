@@ -23,6 +23,11 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
     [ObservableProperty]
     private double _progress;
 
+    /// <summary>"3 dari 10 file" selama <see cref="RunBatchAsync"/> berjalan; kosong di luar itu (termasuk mode bundle,
+    /// yang progress-nya satu aliran byte utuh, bukan langkah per file).</summary>
+    [ObservableProperty]
+    private string _progressCountText = "";
+
     public bool HasFiles => Files.Count > 0;
 
     public string FileCountText => Files.Count switch
@@ -274,6 +279,7 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
                 }
 
                 item.Status = BatchStatus.Running;
+                ProgressCountText = $"{done + 1} dari {pending.Count} file";
                 var completed = done;
                 var reporter = new Progress<double>(p => Progress = (completed + p) / pending.Count);
                 try
@@ -300,6 +306,7 @@ public abstract partial class BatchFileViewModelBase(IAuditLog auditLog, Session
         {
             EndRun();
             SetBusy(false);
+            ProgressCountText = "";
         }
 
         Summarize(pending);

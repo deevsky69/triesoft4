@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
+             xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Triesoft.App.Views.MessageBanner"
+             x:DataType="vm:ViewModelBase">
+    <!--
+        Pengganti seragam untuk sepasang TextBlock ErrorMessage/SuccessMessage yang tadinya diulang di tiap
+        View. DataContext mengalir apa adanya dari View pemanggil (setiap ViewModel layar adalah ViewModelBase),
+        jadi cukup taruh <views:MessageBanner /> tanpa binding tambahan.
+    -->
+    <StackPanel Spacing="8">
+        <Border Classes="banner banner-error"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <views:DangerBadge Grid.Column="0" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="1" Text="{Binding ErrorMessage}" Classes="body" TextWrapping="Wrap"
+                           Foreground="{StaticResource Brush.Danger}" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+        <Border Classes="banner banner-success"
+                IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <views:SuccessBadge Grid.Column="0" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="1" Text="{Binding SuccessMessage}" Classes="body" TextWrapping="Wrap"
+                           Foreground="{StaticResource Brush.Success}" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

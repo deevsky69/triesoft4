@@ -10,7 +10,7 @@ public enum AlgorithmProfile : byte
     /// <summary>Profile A — AES-256-GCM. Satu-satunya profil yang diimplementasikan saat ini.</summary>
     AesGcm256 = 0x01,
 
-    /// <summary>Profile B — ChaCha20-Poly1305. Dicadangkan untuk fase berikutnya.</summary>
+    /// <summary>Profile B — ChaCha20-Poly1305 (RFC 8439), lewat BouncyCastle (lihat <see cref="AeadCipherFactory"/>).</summary>
     ChaCha20Poly1305 = 0x02,
 
     /// <summary>Profile C — dicadangkan untuk algoritma kriptografi nasional (BSSN).</summary>

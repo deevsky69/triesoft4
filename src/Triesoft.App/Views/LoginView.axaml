@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              mc:Ignorable="d"
              x:Class="Triesoft.App.Views.LoginView"
@@ -34,8 +35,7 @@
                         <TextBox Text="{Binding Password}" PasswordChar="•" />
                     </StackPanel>
 
-                    <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
-                               IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                    <views:MessageBanner />
 
                     <Button Content="Masuk" Classes="primary" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center" Command="{Binding LoginCommand}" />

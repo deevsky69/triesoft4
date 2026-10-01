@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Triesoft.App.Views.DangerBadge"
+             Width="22" Height="22">
+    <Panel>
+        <Ellipse Fill="{StaticResource Brush.DangerSoft}" Width="22" Height="22" />
+        <TextBlock Text="!" FontWeight="Bold" FontSize="14" Foreground="{StaticResource Brush.Danger}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Panel>
+</UserControl>

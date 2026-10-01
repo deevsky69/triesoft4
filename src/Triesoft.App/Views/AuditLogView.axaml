@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
              xmlns:audit="clr-namespace:Triesoft.Core.Audit;assembly=Triesoft.Core"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.AuditLogView"
@@ -16,10 +17,7 @@
                     <Button Content="Verifikasi Integritas" Classes="primary" Command="{Binding VerifyIntegrityCommand}" />
                     <Button Content="Muat Ulang" Classes="secondary" Command="{Binding ReloadCommand}" />
                 </StackPanel>
-                <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
-                           IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
-                <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
-                           IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+                <views:MessageBanner />
             </StackPanel>
         </Border>
 

@@ -24,6 +24,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
     public bool IsKeyDistributionPageActive => CurrentPage is KeyDistributionViewModel;
     public bool IsUserManagementPageActive => CurrentPage is UserManagementViewModel;
     public bool IsAuditLogPageActive => CurrentPage is AuditLogViewModel;
+    public bool IsAboutPageActive => CurrentPage is AboutViewModel;
 
     public event EventHandler? LoggedOut;
 
@@ -35,6 +36,7 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
         OnPropertyChanged(nameof(IsKeyDistributionPageActive));
         OnPropertyChanged(nameof(IsUserManagementPageActive));
         OnPropertyChanged(nameof(IsAuditLogPageActive));
+        OnPropertyChanged(nameof(IsAboutPageActive));
     }
 
     public void Initialize(UserAccount user)
@@ -81,6 +83,10 @@ public partial class MainShellViewModel(IServiceProvider services) : ObservableO
         if (!IsAdmin) return;
         SetPage("Audit Log", services.GetRequiredService<AuditLogViewModel>());
     }
+
+    [RelayCommand]
+    private void NavigateToAbout() =>
+        SetPage("Tentang", services.GetRequiredService<AboutViewModel>());
 
     [RelayCommand]
     private void Logout() => LoggedOut?.Invoke(this, EventArgs.Empty);

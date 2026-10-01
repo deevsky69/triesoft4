@@ -132,6 +132,42 @@ public class ScreenshotTests
     }
 
     [Fact]
+    public void MainShell_SidebarIcons_Screenshot()
+    {
+        // Layar biasa dengan semua item sidebar terlihat (Admin), untuk memeriksa ikon nav secara visual.
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        Render(new MainShellView { DataContext = shell }, "main-shell-icons.png");
+    }
+
+    /// <summary>
+    /// Tema (Colors.axaml vs Colors.Dark.axaml) dipilih SEKALI di konstruktor App, sebelum style manapun
+    /// di-parse -- lihat catatan panjang di App.axaml.cs kenapa tidak bisa digabung belakangan dalam
+    /// proses yang sama. Konsekuensinya: satu proses test cuma bisa merender SATU tema (yang mana pun
+    /// yang aktif saat HeadlessSetup pertama kali membuat instance App di proses ini). Untuk memverifikasi
+    /// tema gelap secara visual, jalankan proses test TERPISAH dengan TRIESOFT4_DATA_DIR menunjuk ke folder
+    /// berisi preferences.json {"Theme":"Dark"}, lalu lihat screenshot yang sama ini -- bukan test otomatis
+    /// permanen, karena tidak bisa mem-verifikasi kedua tema dalam satu proses seperti test lain di sini.
+    /// </summary>
+    [Fact]
+    public void MainShell_KeyManagement_ForThemeCheck_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        shell.NavigateToKeyManagementCommand.Execute(null);
+        Render(new MainShellView { DataContext = shell }, "main-shell-theme-check.png");
+    }
+
+    [Fact]
+    public void MainShell_About_Screenshot()
+    {
+        var shell = BuildShell(out var user);
+        shell.Initialize(user);
+        shell.NavigateToAboutCommand.Execute(null);
+        Render(new MainShellView { DataContext = shell }, "main-shell-about.png", height: 900);
+    }
+
+    [Fact]
     public void MainShell_KeyManagement_Screenshot()
     {
         var shell = BuildShell(out var user);
@@ -249,6 +285,7 @@ public class ScreenshotTests
         services.AddTransient<KeyManagementViewModel>();
         services.AddTransient<UserManagementViewModel>();
         services.AddTransient<AuditLogViewModel>();
+        services.AddTransient<AboutViewModel>();
         return services.BuildServiceProvider();
     }
 

@@ -3,8 +3,7 @@
              xmlns:conv="clr-namespace:Triesoft.App.Converters"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
              xmlns:views="clr-namespace:Triesoft.App.Views"
-             x:Class="Triesoft.App.App"
-             RequestedThemeVariant="Light">
+             x:Class="Triesoft.App.App">
 
     <Application.DataTemplates>
         <DataTemplate DataType="vm:LoginViewModel">
@@ -18,16 +17,15 @@
         </DataTemplate>
     </Application.DataTemplates>
 
-    <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Triesoft.App/Theme/Colors.axaml" />
-            </ResourceDictionary.MergedDictionaries>
-            <conv:KeyStatusToBrushConverter x:Key="KeyStatusToBrushConverter" />
-            <conv:UserStatusToBrushConverter x:Key="UserStatusToBrushConverter" />
-            <conv:BatchStatusToBrushConverter x:Key="BatchStatusToBrushConverter" />
-        </ResourceDictionary>
-    </Application.Resources>
+    <!--
+        TIDAK ADA elemen Application.Resources di sini SENGAJA. App() (App.axaml.cs) membangun seluruh
+        Resources (converter + warna) lewat kode, di constructor, sebelum Initialize()/AvaloniaXamlLoader
+        memparse Application.Styles di bawah (yang me-resolve StaticResource Brush.* begitu pertama kali
+        dipakai). Kalau elemen Application.Resources ada di XAML ini, memparsenya (bagian dari Initialize()
+        yang sama) MENIMPA seluruh objek Resources, termasuk yang sudah diisi lewat kode di constructor,
+        sehingga warna yang sudah dimuat lenyap lagi sebelum sempat dipakai style. Lihat juga catatan
+        panjang soal ini di App.axaml.cs dan AppPreferences.
+    -->
 
     <Application.Styles>
         <FluentTheme />

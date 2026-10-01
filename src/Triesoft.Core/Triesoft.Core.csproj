@@ -8,6 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Supaya tes bisa memverifikasi primitif AEAD internal (mis. langsung terhadap test vector RFC),
+         tanpa mengekspos apa pun ke Triesoft.App/Triesoft.Cli. -->
+    <InternalsVisibleTo Include="Triesoft.Core.Tests" />
   </ItemGroup>
 
 </Project>

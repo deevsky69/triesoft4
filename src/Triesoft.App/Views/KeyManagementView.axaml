@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
              xmlns:km="clr-namespace:Triesoft.Core.KeyManagement;assembly=Triesoft.Core"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.KeyManagementView"
@@ -22,8 +23,12 @@
                                 <TextBlock Grid.Column="2" Text="{Binding Status}" Classes="secondary" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="3" Text="{Binding ValidFrom, StringFormat='{}{0:yyyy-MM-dd}'}"
                                            Classes="caption" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="4" Text="{Binding ValidUntil, StringFormat='{}{0:yyyy-MM-dd}'}"
-                                           Classes="caption" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="4" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{Binding ValidUntil, StringFormat='{}{0:yyyy-MM-dd}'}" Classes="caption" />
+                                    <TextBlock Text="{Binding ., Converter={StaticResource KeyExpiryWarningConverter}}"
+                                               Classes="caption" FontWeight="SemiBold" Foreground="{StaticResource Brush.Warning}"
+                                               IsVisible="{Binding ., Converter={StaticResource KeyExpiryWarningConverter}}" />
+                                </StackPanel>
                                 <TextBlock Grid.Column="5" Text="{Binding StatusReason}" Classes="caption"
                                            VerticalAlignment="Center" TextWrapping="Wrap" />
                             </Grid>
@@ -79,9 +84,6 @@
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{Binding ErrorMessage}" Classes="error-text"
-                   IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Text="{Binding SuccessMessage}" Classes="success-text"
-                   IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        <views:MessageBanner />
     </StackPanel>
 </UserControl>

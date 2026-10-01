@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Ditampilkan di layar Tentang untuk keperluan dukungan/troubleshooting. Naikkan manual per rilis;
+         belum ada proses versioning otomatis (lihat HANDOFF.md). -->
+    <Version>0.5.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

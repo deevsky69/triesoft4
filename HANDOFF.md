@@ -22,9 +22,9 @@ Bahasa kerja dengan pemilik proyek: **Bahasa Indonesia**. Pesan error dan teks U
 | 3 | UI + login/auth + RBAC | Selesai |
 | 4 | Audit log tamper-evident | Selesai |
 | 5 | Distribusi kunci Mabes ke Polda | Selesai (lihat bagian "Distribusi kunci") |
-| 6 | Algoritma tambahan (Profile B/C/D) | **Belum** |
+| 6 | Algoritma tambahan (Profile B selesai; C/D masih **Belum**, menunggu jawaban BSSN) |
 
-Tes: 174 di `Triesoft.Core.Tests`, 78 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 error. Peringatan yang tersisa hanya di proyek tes screenshot: 1 API usang (`Bitmap.Save`) dan 2 xUnit1031 yang disengaja (`Task.Run(...).GetAwaiter().GetResult()` sebagai jalan keluar deadlock thread UI headless).
+Tes: 191 di `Triesoft.Core.Tests`, 101 di `Triesoft.App.Tests`, semua hijau di Windows (termasuk `DpapiKeyProtectorTests`, yang sebelumnya hanya dilewati di macOS). Build 0 error. Peringatan yang tersisa hanya di proyek tes screenshot: 1 API usang (`Bitmap.Save`) dan 2 xUnit1031 yang disengaja (`Task.Run(...).GetAwaiter().GetResult()` sebagai jalan keluar deadlock thread UI headless).
 
 ## 3. Keputusan penting dan alasannya
 
@@ -34,10 +34,12 @@ Tes: 174 di `Triesoft.Core.Tests`, 78 di `Triesoft.App.Tests`, semua hijau di Wi
 - **Avalonia, bukan WPF.** Awalnya disepakati WPF. Diganti karena WPF hanya bisa dibangun di Windows, sedangkan pengembangan dilakukan di Mac. Avalonia memakai pola XAML/MVVM yang sangat mirip, tetap berjalan di Windows, dan memungkinkan render layar ke PNG untuk verifikasi visual.
 
 **Kriptografi**
-- **AES-256-GCM saja** untuk sekarang, memakai `System.Security.Cryptography.AesGcm` bawaan .NET tanpa dependensi luar. Tujuannya trusted computing base sekecil mungkin supaya mudah diaudit dan disertifikasi. `ChaCha20Poly1305` bawaan .NET **tidak didukung di Windows** (PlatformNotSupportedException), jadi menambahkannya butuh BouncyCastle. Itu sebabnya Profile B ditunda.
-- **Envelope encryption.** DEK acak baru per file mengenkripsi isi dan nama file. DEK dibungkus (AES-GCM) oleh KEK (kunci bulanan). Nama file asli ikut dienkripsi.
+- **Dua algoritma sekarang: AES-256-GCM (bawaan/default) dan ChaCha20-Poly1305 (Profile B, selesai).** Dipilih per file di layar Enkripsi (`EncryptViewModel.SelectedAlgorithm`/`AlgorithmOption`); Dekripsi selalu otomatis mengikuti `AlgorithmProfile` yang tercatat di header, tidak perlu dipilih. `AeadCipherFactory` (`Triesoft.Core/Crypto`) adalah satu-satunya tempat pemetaan profil -> primitif, lewat `IAeadCipher` yang tanda tangannya sengaja identik dengan `AesGcm` bawaan .NET (nonce 12 byte, tag 16 byte -- sama persis untuk kedua algoritma, jadi format file, ukuran chunk, dan AAD tidak berubah sama sekali). Cakupan profil ini juga meliputi pembungkusan DEK dan enkripsi nama file, bukan cuma isi (sesuai dokumentasi lama `AlgorithmProfile`) -- satu file = satu algoritma dari header sampai isi.
+- **ChaCha20-Poly1305 lewat BouncyCastle (`BouncyCastle.Cryptography`), BUKAN `System.Security.Cryptography.ChaCha20Poly1305` bawaan .NET.** Diverifikasi langsung di mesin ini: kelas bawaan .NET **sudah didukung di Windows 11**/.NET 10 (`ChaCha20Poly1305.IsSupported == true`), tapi Microsoft mensyaratkan Windows 11/Server 2022 ke atas -- Windows 10 (target utama README) tidak punya dukungan CNG-nya. Karena mesin Mabes dan tiap Polda harus bisa saling membuka file terlepas versi Windows-nya, dipakai library yang identik di semua versi, bukan bergantung dukungan OS. `ChaCha20Poly1305AeadCipher` memakai API incremental BC (`Init`/`ProcessBytes`/`DoFinal` lewat `AeadParameters`+`KeyParameter`, alias `BcChaCha20Poly1305` karena nama kelasnya sama dengan tipe .NET), dan menerjemahkan `InvalidCipherTextException` BC ke `CryptographicException` supaya pemanggil tidak perlu tahu/menangkap tipe BC secara terpisah.
+- **KAT (known-answer test) untuk ChaCha20-Poly1305 diambil dari teks resmi RFC 8439 §2.8.2 lewat WebFetch (rfc-editor.org), bukan dari ingatan** -- percobaan pertama mengetik vektor dari ingatan salah satu digit hex di tengah ciphertext (216 karakter), meski tag-nya (32 karakter, lebih pendek) kebetulan benar. Pelajaran: jangan pernah menaruh angka kripto panjang hasil hapalan ke test permanen tanpa verifikasi terhadap sumber resmi.
+- **Envelope encryption.** DEK acak baru per file mengenkripsi isi dan nama file. DEK dibungkus oleh KEK (kunci bulanan) memakai algoritma yang sama dengan isi file.
 - **Isi file dienkripsi per chunk** (default 1 MiB) supaya file besar tidak dimuat penuh ke memori, dan supaya pemotongan, penambahan, dan pengurutan ulang chunk terdeteksi.
-- **Slot algoritma dicadangkan** di `AlgorithmProfile`: `0x01` AES-256-GCM (dipakai), `0x02` ChaCha20-Poly1305, `0x03` algoritma nasional BSSN, `0x04` post-quantum. Format file sudah siap, implementasinya belum.
+- **Slot algoritma dicadangkan** di `AlgorithmProfile`: `0x01` AES-256-GCM (dipakai), `0x02` ChaCha20-Poly1305 (dipakai), `0x03` algoritma nasional BSSN, `0x04` post-quantum. `Ts4FileFormat.ReadHeader` menolak `0x03`/`0x04` dengan `NotSupportedException` (belum diimplementasikan), bukan diam-diam memperlakukannya sebagai AES.
 - **PQC (ML-KEM/ML-DSA) belum perlu** untuk enkripsi file simetris. Baru relevan saat distribusi kunci memakai pertukaran kunci asimetris.
 
 **Format file `.ts4`** (semua integer little-endian, kecuali counter nonce yang big-endian)
@@ -101,6 +103,20 @@ Tes: 174 di `Triesoft.Core.Tests`, 78 di `Triesoft.App.Tests`, semua hijau di Wi
 - **Belum ada:** folder kosong di dalam bundle, opsi menyertakan file tersembunyi, dan progres per file di dalam bundle. Cabang "file menyusut saat dibaca" hanya teruji di OS yang mengizinkannya; di Windows `FileShare.Read` sudah mencegahnya.
 - Jebakan tes: memanggil `ExecuteAsync(...).GetAwaiter().GetResult()` dari thread UI headless membuat **deadlock**. Jalankan lewat `Task.Run(...)` (lihat `MainShell_EncryptBatch_Screenshot`).
 
+**UI/UX (ikon sidebar, mode gelap, komponen pesan bersama)**
+- **Mode gelap: PALING BANYAK MAKAN WAKTU debugging di sesi ini.** Tiga percobaan sebelum berhasil, dan pelajarannya penting untuk siapa pun yang menyentuh `Theme/` atau `App.axaml(.cs)` lagi:
+  1. **Percobaan 1 (Avalonia `ThemeDictionaries`/`RequestedThemeVariant`, DITINGGALKAN):** `Color.*` di dalam `<ResourceDictionary.ThemeDictionaries>`, `Brush.*` di luar merujuknya lewat `StaticResource`. Gagal dengan `KeyNotFoundException` -- resolusi resource bertingkat-tema perlu `ThemeVariant` yang aktif, dan itu belum tersedia saat dictionary itu sendiri sedang diisi.
+  2. **Percobaan 2 (gabungkan `Colors.Dark.axaml` MENIMPA `Colors.axaml` lewat kode, SETELAH `Initialize()`, DITINGGALKAN):** Build-nya sukses dan tidak error, tapi secara visual **tetap terang** -- terbukti lewat screenshot headless DAN lewat menjalankan aplikasi asli dan screen-capture jendelanya. Sebab: style di `Controls.axaml`/`Typography.axaml` me-resolve `{StaticResource Brush.X}` begitu PERTAMA KALI dipakai (saat `Initialize()` memparse style, sebelum kode sempat menambah dictionary kedua), dan nilai itu seolah "dibekukan" pada objek `Style` itu -- menambah dictionary lain belakangan tidak menimpanya lagi.
+  3. **Percobaan 3 (BERHASIL, dipakai sekarang):** pilih **TEPAT SATU** di antara `Colors.axaml`/`Colors.Dark.axaml` di **constructor `App()`** (sebelum `Initialize()` sama sekali), dan **hapus elemen `<Application.Resources>` dari `App.axaml`** -- kalau elemen itu ada, memparsenya (bagian dari `Initialize()` yang sama) MENIMPA SELURUH OBJEK `Resources`, termasuk yang baru diisi lewat kode di constructor. Jadi seluruh `Resources` (warna + 4 converter: `KeyStatusToBrushConverter`, `UserStatusToBrushConverter`, `BatchStatusToBrushConverter`, `KeyExpiryWarningConverter`) sekarang dibangun manual di `App()` lewat `Resources.Add(...)`/`Resources.MergedDictionaries.Add(...)`, BUKAN lewat XAML. `RequestedThemeVariant` (Light/Dark) JUGA diset di constructor yang sama, terpisah dari warna kustom -- ini yang membuat chrome bawaan FluentTheme sendiri (mis. warna default TextBox) ikut gelap, bukan cuma elemen yang dipakaikan Brush.* kustom.
+  - **Konsekuensi:** ganti tema (`AppPreferences`, `ThemePreference.Light`/`Dark`, file `preferences.json` di `AppPaths.DataRoot`) **butuh restart aplikasi**, tidak bisa live -- dan TIDAK BOLEH dicoba dibuat live tanpa mengganti seluruh `StaticResource Brush.*` di codebase (puluhan pemakaian) jadi `DynamicResource`, yang punya risiko sendiri (elemen yang terlewat akan macet di warna lama).
+  - **Cara memverifikasi tema gelap dengan benar** (headless test TIDAK BISA menguji kedua tema dalam satu proses, karena `HeadlessSetup.EnsureInitialized()` cuma membuat satu instance `App` per proses test): jalankan `dotnet test` dua kali di proses TERPISAH, sekali biasa (Terang) dan sekali dengan `TRIESOFT4_DATA_DIR` menunjuk folder berisi `preferences.json` `{"Theme":"Dark"}`, lalu bandingkan screenshot yang sama (`MainShell_KeyManagement_ForThemeCheck_Screenshot`, nama filenya `main-shell-theme-check.png`, tertimpa tiap run -- bukan dua file berbeda).
+  - **Jebakan `System.Text.Json` + enum:** `AppPreferences` memakai `JsonStringEnumConverter` secara eksplisit. Tanpa itu, `{"Theme":"Dark"}` (string) GAGAL di-deserialize karena default-nya mengharap angka (`{"Theme":1}`) -- `JsonException` itu tertangkap oleh try/catch `Load()` dan diam-diam jatuh ke bawaan (Light), sempat menyamarkan percobaan 3 di atas seolah masih gagal padahal mekanismenya sudah benar.
+- **Ikon sidebar** (`Views/NavIcon` + `Converters/NavIconKindToGeometryConverter`): sengaja cuma garis lurus (tanpa busur/arc) di kanvas 20x20 -- lebih gampang dipastikan benar tanpa alat gambar vektor. **Jebakan:** ikon "Info" awal (garis vertikal murni, semua titik x=10) tidak tampil SAMA SEKALI -- bounding box geometinya lebar NOL, dan itu merusak transformasi `Stretch="Uniform"`. Perbaikannya kasih badan 2D nyata (wajik) sebelum menambah garis dalamnya. Diverifikasi visual lewat test sekali-pakai yang merender semua `NavIconKind` besar-besar di satu lembar (lihat pola ini di histori kalau perlu menambah ikon lagi -- jangan percaya ikon kecil di screenshot biasa, terlalu kecil untuk menilai bentuknya).
+- **`Views/MessageBanner`**: pengganti seragam pasangan `TextBlock` ErrorMessage/SuccessMessage yang tadinya diulang di 8 View (Encrypt, Decrypt, KeyManagement, KeyDistribution, UserManagement, AuditLog, Login, FirstRunSetup). `x:DataType="vm:ViewModelBase"`, DataContext mengalir apa adanya dari View pemanggil -- cukup taruh `<views:MessageBanner />`. Ikon error (`DangerBadge`, lingkaran merah + "!") dan sukses (`SuccessBadge`, lingkaran hijau + centang lewat `Path` 2 segmen, BUKAN karakter Unicode checkmark supaya tidak bergantung cakupan glyph font). `DangerBadge` dipakai juga di `ConfirmDialog` untuk aksi destruktif.
+- **Progres batch "X dari Y file"** (`BatchFileViewModelBase.ProgressCountText`): hanya terisi selama `RunBatchAsync` (mode per-file Encrypt dan selalu Decrypt); mode bundle progress-nya satu aliran byte utuh jadi tidak berlaku, tetap kosong.
+- **Peringatan kedaluwarsa kunci** (`Converters/KeyExpiryWarningConverter`): tampil kalau kunci berstatus Active dan `ValidUntil` dalam <=7 hari. Murni tampilan, tidak menyentuh `KeyMetadata`/format `index.json` di Core. **Pola dua-target:** satu converter dipakai untuk DUA binding sekaligus dari data yang sama (`Text` dan `IsVisible`) dengan cabang `if (targetType == typeof(bool))` -- menghindari MultiBinding atau converter kedua untuk kasus sederhana ini.
+- **Layar Tentang** (`AboutViewModel`/`AboutView`, nav "Tentang" terlihat semua peran termasuk Operator, bukan cuma Admin): versi (`<Version>` di `Triesoft.App.csproj`, naik manual), daftar algoritma yang didukung, pengubah tema, dan folder data (`AppPaths.DataRoot`) untuk keperluan dukungan teknis.
+
 ## 4. Jebakan teknis yang sudah ditemui
 
 - Csproj template Avalonia **tidak mengaktifkan `ImplicitUsings`**. Tanpa itu banyak tipe dasar "tidak ditemukan".
@@ -114,10 +130,12 @@ Tes: 174 di `Triesoft.Core.Tests`, 78 di `Triesoft.App.Tests`, semua hijau di Wi
 
 ## 5. Celah verifikasi yang masih terbuka
 
-1. **`DpapiKeyProtectorTests` belum pernah benar-benar berjalan.** Tes itu keluar lebih awal di non-Windows. Jalankan `dotnet test` di Windows sekali. Ini celah utama fase key management.
-2. **Aplikasi belum pernah dijalankan sebagai jendela sungguhan.** Semua verifikasi visual lewat render headless. Coba `dotnet run --project src/Triesoft.App` dan nilai rasa pakainya (alur, ukuran font, kecepatan).
-3. **Uji dengan file besar** (ratusan MB) di aplikasi belum dilakukan. Uji round-trip terbesar di tes adalah 5 MB.
+1. ~~`DpapiKeyProtectorTests` belum pernah benar-benar berjalan~~ -- sudah, hijau di Windows sejak beberapa sesi lalu.
+2. ~~Aplikasi belum pernah dijalankan sebagai jendela sungguhan~~ -- sudah berkali-kali, termasuk screen-capture jendela asli untuk debugging mode gelap (lihat bagian 3, UI/UX).
+3. **Uji dengan file besar** (ratusan MB) sudah dilakukan untuk bundle (350 MB, lihat bagian 3), belum untuk enkripsi/dekripsi satu file biasa. Uji round-trip terbesar di `EnvelopeCipherTests` masih 5 MB.
 4. Tidak ada uji integrasi antar-mesin.
+5. **Mode gelap** sudah diverifikasi lewat screenshot proses terpisah (lihat bagian 3, UI/UX), tapi belum pernah dilihat langsung sebagai jendela sungguhan oleh manusia -- coba `TRIESOFT4_DATA_DIR` dengan `preferences.json` `{"Theme":"Dark"}` lalu `dotnet run`, nilai keterbacaan warnanya.
+6. Pemilih algoritma (AES/ChaCha20) di layar Enkripsi, drag-drop, dan checkbox subfolder belum pernah diklik langsung oleh manusia -- baru lewat kode ViewModel yang sama dan screenshot headless.
 
 ## 6. Pertanyaan terbuka (butuh keputusan pemilik proyek)
 
@@ -127,11 +145,12 @@ Tes: 174 di `Triesoft.Core.Tests`, 78 di `Triesoft.App.Tests`, semua hijau di Wi
 
 ## 7. Langkah berikutnya yang disarankan
 
-1. Di Windows: `dotnet test`, jalankan aplikasi, catat masalah tampilan atau alur.
+1. Di Windows: `dotnet test`, jalankan aplikasi, catat masalah tampilan atau alur -- termasuk klik langsung pemilih algoritma, mode gelap, drag-drop, dan checkbox subfolder (lihat celah verifikasi poin 5-6).
 2. **Distribusi kunci**: sudah diimplementasikan (lihat bagian 3). Rotasi dan pencabutan kunci identitas juga sudah ada. Sisa: uji manual antar-dua-mesin lewat dialog file, konfirmasi ke Bidsandi apakah alur digital + sidik jari manual diterima, pertimbangkan hybrid ML-KEM, dan peran Superadmin vs AdminDaerah (sekarang penerbit ditentukan oleh tombol "Aktifkan sebagai Penerbit", bukan peran).
 3. Tambahkan peran **Auditor** (hanya bisa melihat audit log) kalau dibutuhkan pemisahan tugas.
-4. Profile B (ChaCha20-Poly1305 via BouncyCastle) dan persiapan Profile C (algoritma nasional) setelah ada jawaban dari BSSN.
-5. Untuk pemakaian resmi: audit keamanan pihak ketiga, code signing, installer.
+4. ~~Profile B (ChaCha20-Poly1305 via BouncyCastle)~~ -- selesai. Persiapan Profile C (algoritma nasional) setelah ada jawaban dari BSSN.
+5. Untuk pemakaian resmi: audit keamanan pihak ketiga (termasuk BouncyCastle sebagai dependensi kripto baru), code signing, installer.
+6. **UI/UX yang belum dikerjakan** (lihat juga bagian 3): pencarian/filter/paginasi untuk daftar Kelola Kunci/Kelola User/Audit Log (bisa jadi masalah nyata begitu Audit Log membesar), indikator kekuatan password saat registrasi, tooltip istilah kripto di layar lain (baru ada di pemilih algoritma), pratinjau struktur folder sebelum bundle dibuat, perkiraan waktu tersisa untuk operasi besar, dan audit kontras warna WCAG formal untuk kedua tema.
 
 ## 8. Cara kerja yang dipakai di proyek ini
 

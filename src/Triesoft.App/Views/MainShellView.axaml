@@ -24,6 +24,9 @@
         <DataTemplate DataType="vm:AuditLogViewModel">
             <views:AuditLogView />
         </DataTemplate>
+        <DataTemplate DataType="vm:AboutViewModel">
+            <views:AboutView />
+        </DataTemplate>
     </UserControl.DataTemplates>
 
     <Grid ColumnDefinitions="240,*">
@@ -38,21 +41,62 @@
                                Foreground="{StaticResource Brush.TextOnSidebarMuted}" FontSize="11" />
                 </StackPanel>
 
-                <Button DockPanel.Dock="Bottom" Content="Keluar" Classes="nav" Command="{Binding LogoutCommand}" />
+                <StackPanel DockPanel.Dock="Bottom" Spacing="4">
+                    <Button Classes="nav" Classes.active="{Binding IsAboutPageActive}" Command="{Binding NavigateToAboutCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Info" />
+                            <TextBlock Text="Tentang" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Command="{Binding LogoutCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Exit" />
+                            <TextBlock Text="Keluar" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <Button Content="Enkripsi File" Classes="nav" Classes.active="{Binding IsEncryptPageActive}"
-                            Command="{Binding NavigateToEncryptCommand}" />
-                    <Button Content="Dekripsi File" Classes="nav" Classes.active="{Binding IsDecryptPageActive}"
-                            Command="{Binding NavigateToDecryptCommand}" />
-                    <Button Content="Kelola Kunci" Classes="nav" Classes.active="{Binding IsKeyManagementPageActive}"
-                            Command="{Binding NavigateToKeyManagementCommand}" IsVisible="{Binding IsAdmin}" />
-                    <Button Content="Distribusi Kunci" Classes="nav" Classes.active="{Binding IsKeyDistributionPageActive}"
-                            Command="{Binding NavigateToKeyDistributionCommand}" IsVisible="{Binding IsAdmin}" />
-                    <Button Content="Kelola User" Classes="nav" Classes.active="{Binding IsUserManagementPageActive}"
-                            Command="{Binding NavigateToUserManagementCommand}" IsVisible="{Binding IsAdmin}" />
-                    <Button Content="Audit Log" Classes="nav" Classes.active="{Binding IsAuditLogPageActive}"
-                            Command="{Binding NavigateToAuditLogCommand}" IsVisible="{Binding IsAdmin}" />
+                    <Button Classes="nav" Classes.active="{Binding IsEncryptPageActive}" Command="{Binding NavigateToEncryptCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Lock" />
+                            <TextBlock Text="Enkripsi File" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding IsDecryptPageActive}" Command="{Binding NavigateToDecryptCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Unlock" />
+                            <TextBlock Text="Dekripsi File" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding IsKeyManagementPageActive}"
+                            Command="{Binding NavigateToKeyManagementCommand}" IsVisible="{Binding IsAdmin}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Key" />
+                            <TextBlock Text="Kelola Kunci" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding IsKeyDistributionPageActive}"
+                            Command="{Binding NavigateToKeyDistributionCommand}" IsVisible="{Binding IsAdmin}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="Share" />
+                            <TextBlock Text="Distribusi Kunci" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding IsUserManagementPageActive}"
+                            Command="{Binding NavigateToUserManagementCommand}" IsVisible="{Binding IsAdmin}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="People" />
+                            <TextBlock Text="Kelola User" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding IsAuditLogPageActive}"
+                            Command="{Binding NavigateToAuditLogCommand}" IsVisible="{Binding IsAdmin}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <views:NavIcon Kind="List" />
+                            <TextBlock Text="Audit Log" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>

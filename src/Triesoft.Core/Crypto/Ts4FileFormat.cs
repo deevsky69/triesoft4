@@ -56,7 +56,7 @@ internal static class Ts4FileFormat
 
         byte profileByte = ReadByteInto(input, mirror);
         var profile = (AlgorithmProfile)profileByte;
-        if (profile != AlgorithmProfile.AesGcm256)
+        if (profile is not (AlgorithmProfile.AesGcm256 or AlgorithmProfile.ChaCha20Poly1305))
             throw new NotSupportedException($"Algorithm profile 0x{profileByte:X2} belum didukung pada versi ini.");
 
         var keyIdBytes = ReadUInt16PrefixedInto(input, mirror);

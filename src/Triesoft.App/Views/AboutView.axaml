@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
+             x:Class="Triesoft.App.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+    <StackPanel Spacing="24" MaxWidth="560" HorizontalAlignment="Left">
+
+        <Border Classes="card">
+            <StackPanel Spacing="4">
+                <TextBlock Text="TRIESOFT 4" Classes="h2" />
+                <TextBlock Text="Tribrata Encryption Software -- Bidsandi Baintelkam Polri" Classes="secondary" />
+                <TextBlock Classes="caption" Margin="0,8,0,0">
+                    <Run Text="Versi " /><Run Text="{Binding Version}" />
+                </TextBlock>
+                <TextBlock Classes="caption" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Text="Masih dalam pengembangan. Belum boleh dipakai untuk berita rahasia sungguhan sebelum ada audit keamanan dan pengesahan resmi dari BSSN/Bidsandi." />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Algoritma Enkripsi yang Didukung" Classes="h2" />
+                <ItemsControl ItemsSource="{Binding SupportedAlgorithms}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:AlgorithmOption">
+                            <StackPanel Spacing="2" Margin="0,6">
+                                <TextBlock Text="{Binding Name}" Classes="body" />
+                                <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Tampilan" Classes="h2" />
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Tema" Classes="caption" />
+                    <ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding SelectedTheme}"
+                              HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <TextBlock Classes="caption" TextWrapping="Wrap"
+                           Text="Perubahan tema berlaku setelah aplikasi ditutup dan dibuka lagi." />
+                <Button Content="Simpan" Classes="primary" Command="{Binding ApplyThemeCommand}" HorizontalAlignment="Left" />
+                <views:MessageBanner />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="6">
+                <TextBlock Text="Untuk Dukungan Teknis" Classes="h2" />
+                <TextBlock Text="Folder data aplikasi ini (kunci, user, audit log):" Classes="caption" />
+                <TextBox Text="{Binding DataDirectory, Mode=OneWay}" IsReadOnly="True" FontSize="12" />
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+</UserControl>

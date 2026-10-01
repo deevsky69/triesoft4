@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Triesoft.App.ViewModels"
+             xmlns:views="clr-namespace:Triesoft.App.Views"
              xmlns:dist="clr-namespace:Triesoft.Core.KeyDistribution;assembly=Triesoft.Core"
              xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              x:Class="Triesoft.App.Views.KeyDistributionView"
@@ -146,9 +147,6 @@
             </StackPanel>
         </Border>
 
-        <TextBlock Text="{Binding ErrorMessage}" Classes="error-text" TextWrapping="Wrap"
-                   IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Text="{Binding SuccessMessage}" Classes="success-text" TextWrapping="Wrap"
-                   IsVisible="{Binding SuccessMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" />
+        <views:MessageBanner />
     </StackPanel>
 </UserControl>

@@ -2,34 +2,32 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
   <!--
-    Palet TERANG (bawaan) untuk tool sandi instansi pemerintah: navy gelap sebagai identitas (tegas,
-    institusional), permukaan netral terang untuk area kerja, aksen biru terkontrol untuk aksi utama, dan
-    merah-maroon KHUSUS aksi destruktif (revoke/purge/nonaktifkan) supaya konsisten dan tidak tertukar
-    dengan aksi biasa. Varian gelap ada di Colors.Dark.axaml, digabung menimpa file ini lewat kode
-    (App.axaml.cs) kalau preferensi tema = Dark; lihat AppPreferences untuk kenapa lewat kode, bukan
-    ThemeDictionaries bawaan Avalonia (resolusi StaticResource-nya belum siap saat resource ini diisi).
+    Varian GELAP: kunci yang SAMA PERSIS dengan Colors.axaml (Terang). Digabung MENIMPA Colors.axaml lewat
+    App.axaml.cs (ditambahkan ke Application.Resources.MergedDictionaries setelah XAML utama selesai
+    dimuat) kalau AppPreferences.Theme = Dark, supaya key yang sama di dictionary yang datang belakangan
+    menang; semantik "last one wins" biasa pada MergedDictionaries, bukan fitur ThemeVariant Avalonia.
   -->
 
-  <Color x:Key="Color.Sidebar">#17233A</Color>
-  <Color x:Key="Color.SidebarActive">#28395B</Color>
-  <Color x:Key="Color.Background">#F4F5F7</Color>
-  <Color x:Key="Color.Surface">#FFFFFF</Color>
-  <Color x:Key="Color.Border">#E1E4E9</Color>
-  <Color x:Key="Color.TextPrimary">#1B2430</Color>
-  <Color x:Key="Color.TextSecondary">#5B6472</Color>
+  <Color x:Key="Color.Sidebar">#0F1826</Color>
+  <Color x:Key="Color.SidebarActive">#223252</Color>
+  <Color x:Key="Color.Background">#15171C</Color>
+  <Color x:Key="Color.Surface">#1E2129</Color>
+  <Color x:Key="Color.Border">#333743</Color>
+  <Color x:Key="Color.TextPrimary">#E8EAED</Color>
+  <Color x:Key="Color.TextSecondary">#9AA1AC</Color>
   <Color x:Key="Color.TextOnSidebar">#E7ECF5</Color>
-  <Color x:Key="Color.TextOnSidebarMuted">#93A2BC</Color>
-  <Color x:Key="Color.Accent">#2E5BFF</Color>
-  <Color x:Key="Color.AccentHover">#274ED1</Color>
-  <Color x:Key="Color.AccentSoft">#EEF2FF</Color>
-  <Color x:Key="Color.Danger">#B3261E</Color>
-  <Color x:Key="Color.DangerHover">#8C1D17</Color>
-  <Color x:Key="Color.DangerSoft">#FBEAE9</Color>
-  <Color x:Key="Color.Success">#1E7F4B</Color>
-  <Color x:Key="Color.SuccessSoft">#E8F5EE</Color>
-  <Color x:Key="Color.Warning">#B7791F</Color>
-  <Color x:Key="Color.WarningSoft">#FBF2E3</Color>
-  <Color x:Key="Color.Neutral">#8A93A2</Color>
+  <Color x:Key="Color.TextOnSidebarMuted">#8996AF</Color>
+  <Color x:Key="Color.Accent">#5B82FF</Color>
+  <Color x:Key="Color.AccentHover">#7B9AFF</Color>
+  <Color x:Key="Color.AccentSoft">#1E2A4D</Color>
+  <Color x:Key="Color.Danger">#E5564D</Color>
+  <Color x:Key="Color.DangerHover">#F0766E</Color>
+  <Color x:Key="Color.DangerSoft">#3A2120</Color>
+  <Color x:Key="Color.Success">#3FB877</Color>
+  <Color x:Key="Color.SuccessSoft">#1B3327</Color>
+  <Color x:Key="Color.Warning">#D9A03D</Color>
+  <Color x:Key="Color.WarningSoft">#3A2F18</Color>
+  <Color x:Key="Color.Neutral">#7C8492</Color>
 
   <SolidColorBrush x:Key="Brush.Sidebar" Color="{StaticResource Color.Sidebar}" />
   <SolidColorBrush x:Key="Brush.SidebarActive" Color="{StaticResource Color.SidebarActive}" />

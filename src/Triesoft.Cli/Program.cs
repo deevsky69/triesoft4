@@ -43,15 +43,16 @@ int RunEncrypt(string[] cliArgs)
     var keyHex = opts.Options.GetValueOrDefault("key")
         ?? throw new ArgumentException("--key (hex 64 karakter / 32 byte) wajib diisi.");
     var outputPath = opts.Options.GetValueOrDefault("out") ?? inputPath + ".ts4";
+    var algorithm = ParseAlgorithm(opts.Options.GetValueOrDefault("algorithm"));
 
     var keyBytes = Convert.FromHexString(keyHex);
     using var kek = MonthlyKey.FromBytes(keyId, keyBytes);
 
     using var input = File.OpenRead(inputPath);
     using var output = File.Create(outputPath);
-    EnvelopeCipher.Encrypt(input, output, kek, Path.GetFileName(inputPath));
+    EnvelopeCipher.Encrypt(input, output, kek, Path.GetFileName(inputPath), algorithm: algorithm);
 
-    Console.WriteLine($"OK: {inputPath} -> {outputPath} (KeyId: {keyId})");
+    Console.WriteLine($"OK: {inputPath} -> {outputPath} (KeyId: {keyId}, algoritma: {algorithm})");
     return 0;
 }
 
@@ -197,6 +198,14 @@ IKeyProtector CreateProtector()
 string RequireOption((string? Positional, Dictionary<string, string> Options) opts, string name) =>
     opts.Options.GetValueOrDefault(name) ?? throw new ArgumentException($"--{name} wajib diisi.");
 
+AlgorithmProfile ParseAlgorithm(string? value) => value?.ToLowerInvariant() switch
+{
+    null => AlgorithmProfile.AesGcm256,
+    "aes" or "aes-gcm" or "aesgcm256" => AlgorithmProfile.AesGcm256,
+    "chacha" or "chacha20" or "chacha20-poly1305" => AlgorithmProfile.ChaCha20Poly1305,
+    var other => throw new ArgumentException($"--algorithm '{other}' tidak dikenal. Pakai 'aes' atau 'chacha20'."),
+};
+
 DateTimeOffset ParseDate(string value) =>
     DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
 
@@ -230,7 +239,7 @@ static void PrintUsage()
         Triesoft.Cli — dev harness untuk core crypto engine TRIESOFT 4 (BUKAN produk akhir).
 
         Penggunaan:
-          triesoft-cli encrypt <file> --key-id <id> --key <64-hex-char> [--out <file.ts4>]
+          triesoft-cli encrypt <file> --key-id <id> --key <64-hex-char> [--out <file.ts4>] [--algorithm aes|chacha20]
           triesoft-cli decrypt <file.ts4> --key-id <id> --key <64-hex-char> [--out <file>]
 
           triesoft-cli key import --store <dir> --key-id <id> --key <64-hex-char> --valid-from <ISO8601> --valid-until <ISO8601>

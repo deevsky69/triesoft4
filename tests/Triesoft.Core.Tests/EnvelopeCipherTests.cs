@@ -160,7 +160,7 @@ public class EnvelopeCipherTests
     {
         using var input = new MemoryStream(plaintext);
         using var output = new MemoryStream();
-        EnvelopeCipher.Encrypt(input, output, kek, fileName, chunkSize);
+        EnvelopeCipher.Encrypt(input, output, kek, fileName, chunkSize: chunkSize);
         return output.ToArray();
     }
 

@@ -12,6 +12,7 @@ Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, ga
 - **Distribusi kunci** (khusus Admin): Mabes menerbitkan kunci bulanan sebagai paket terenkripsi per Polda (file `.ts4kp`), Polda mengimpornya. Lihat "Distribusi kunci Mabes ke Polda" di bawah.
 - **Kelola user** (khusus Admin): daftarkan user baru, verifikasi, nonaktifkan.
 - **Audit log** (khusus Admin): catatan semua aktivitas penting. Catatannya dirantai dengan hash, jadi kalau ada yang diubah atau dihapus diam-diam, tombol "Verifikasi Integritas" akan mendeteksinya.
+- **Tentang** (semua peran): versi aplikasi, daftar algoritma yang didukung, pengaturan tema (Terang/Gelap), dan lokasi folder data untuk keperluan dukungan teknis.
 
 ### Ada dua peran
 
@@ -22,7 +23,7 @@ Aplikasi desktop untuk **mengenkripsi dan mendekripsi file** (PDF, Word, PPT, ga
 
 ## Kenapa lebih aman dari TRIESOFT 3?
 
-- Memakai **AES-256-GCM**, algoritma modern yang sekaligus menjaga kerahasiaan **dan** mendeteksi kalau file diubah orang.
+- Memakai **AES-256-GCM** (bawaan) atau **ChaCha20-Poly1305**, dua algoritma modern yang sekaligus menjaga kerahasiaan **dan** mendeteksi kalau file diubah orang.
 - Setiap file punya **kunci acak sendiri**. Kunci bulanan hanya dipakai untuk "membungkus" kunci file itu. Jadi kalau satu file bocor, file lain di bulan yang sama tetap aman.
 - **Nama file asli ikut dienkripsi**, tidak hanya isinya.
 - File yang dipotong, ditambah, atau diubah 1 byte pun akan **ditolak** saat dekripsi.
@@ -81,7 +82,7 @@ dotnet run --project src/Triesoft.App
 
    Lalu klik **Impor**. Kunci baru otomatis jadi kunci aktif, dan kunci bulan lalu berubah jadi *Expired* (tidak dipakai untuk enkripsi baru, tapi masih bisa membuka arsip lama).
 4. **Daftarkan user lain** di menu **Kelola User**. User baru berstatus *PendingVerification*. Klik **Verifikasi** supaya ia bisa masuk.
-5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu; subfolder ikut kalau kotak *Sertakan subfolder* dicentang, yang bawaannya aktif), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
+5. **Enkripsi file** di menu **Enkripsi File**: *Tambah File...* (boleh pilih banyak) atau *Tambah Folder...* (semua file di folder itu; subfolder ikut kalau kotak *Sertakan subfolder* dicentang, yang bawaannya aktif), pilih **Algoritma** kalau perlu (lihat di bawah), lalu *Enkripsi Semua*. Hasilnya `namafile.ext.ts4` di folder masing-masing file.
 6. **Dekripsi file** di menu **Dekripsi File**: tambahkan file `.ts4` dengan cara yang sama lalu *Dekripsi Semua*. Aplikasi otomatis mencari kunci yang cocok untuk tiap file.
 
 Selain lewat tombol, file dan folder bisa **diseret dari File Explorer** ke kartu Enkripsi atau Dekripsi (kartu berubah biru saat siap menerima). Di Dekripsi, item yang bukan `.ts4` dilewati dan dilaporkan.
@@ -93,7 +94,18 @@ Selain lewat tombol, file dan folder bisa **diseret dari File Explorer** ke kart
 - Isi bundle dicatat di audit log (nama file, jumlah, dan kunci yang dipakai).
 - Keamanan saat membuka: isi bundle baru diekstrak setelah seluruh file lolos autentikasi, nama entri yang berbahaya (`..\`, path absolut, `CON`, dll) ditolak, dan kalau ada masalah tidak ada folder atau file setengah jadi yang tersisa.
 
-**Cara kerja daftar file:** tiap baris punya status (Menunggu, Diproses, Berhasil, Gagal, Dibatalkan) dan alasan kalau gagal. Satu file gagal tidak menghentikan yang lain. Tombol *Batal* berhenti setelah file yang sedang berjalan selesai. Menekan tombol proses lagi hanya mengulang file yang belum berhasil. Kalau dua file menghasilkan nama yang sama di satu folder saat dekripsi, yang kedua diberi nama `nama (2).ext` supaya tidak saling menimpa. Tiap file dicatat sendiri di audit log, termasuk yang gagal.
+**Cara kerja daftar file:** tiap baris punya status (Menunggu, Diproses, Berhasil, Gagal, Dibatalkan) dan alasan kalau gagal. Satu file gagal tidak menghentikan yang lain. Tombol *Batal* berhenti setelah file yang sedang berjalan selesai. Menekan tombol proses lagi hanya mengulang file yang belum berhasil. Kalau dua file menghasilkan nama yang sama di satu folder saat dekripsi, yang kedua diberi nama `nama (2).ext` supaya tidak saling menimpa. Tiap file dicatat sendiri di audit log, termasuk yang gagal. Selama diproses, ada progress bar dan teks "3 dari 10 file".
+
+### Pilihan algoritma
+
+Di layar Enkripsi ada pilihan **Algoritma**, berlaku untuk file yang diproses berikutnya (satu per satu maupun bundle):
+
+| Algoritma | Kapan dipakai |
+|---|---|
+| **AES-256-GCM** (bawaan) | Standar NIST, dipakai luas. Pilih ini kecuali ada alasan khusus. |
+| **ChaCha20-Poly1305** | Alternatif modern (RFC 8439) dengan konstruksi berbeda dari AES. Cadangan kalau suatu saat AES perlu dihindari. |
+
+Dekripsi **tidak perlu memilih algoritma** -- aplikasi otomatis mendeteksinya dari file, jadi file yang dienkripsi dengan algoritma mana pun tetap terbuka dengan cara yang sama.
 
 ### Distribusi kunci Mabes ke Polda
 
@@ -163,11 +175,17 @@ tests/
 
 ```
 dotnet run --project src/Triesoft.Cli -- encrypt laporan.pdf --key-id 2026-09-TEST --key <64-karakter-hex>
+dotnet run --project src/Triesoft.Cli -- encrypt laporan.pdf --key-id 2026-09-TEST --key <64-karakter-hex> --algorithm chacha20
 dotnet run --project src/Triesoft.Cli -- decrypt laporan.pdf.ts4 --key-id 2026-09-TEST --key <64-karakter-hex>
 ```
+
+## Tampilan
+
+Di menu **Tentang**, tema aplikasi bisa diganti antara **Terang** (bawaan) dan **Gelap**. Perubahan tema baru terlihat setelah aplikasi ditutup dan dibuka lagi.
 
 ## Yang belum ada
 
 - Hybrid tahan komputer kuantum (ML-KEM) untuk distribusi kunci.
-- Algoritma tambahan (ChaCha20-Poly1305, algoritma nasional BSSN, dan algoritma tahan komputer kuantum).
+- Algoritma nasional BSSN dan algoritma tahan komputer kuantum (ChaCha20-Poly1305 sudah ada).
 - Peran Auditor terpisah dan login dua langkah (kartu pintar/OTP).
+- Pencarian/filter untuk daftar Kelola Kunci, Kelola User, dan Audit Log.

@@ -11,8 +11,10 @@ public sealed record DecryptResult(string OriginalFileName, string KeyId, Algori
 /// API inti enkripsi/dekripsi file TRIESOFT 4. Memakai envelope encryption dua lapis:
 /// DEK (Data Encryption Key) acak baru per file mengenkripsi isi &amp; nama file, dan DEK itu
 /// sendiri dibungkus oleh KEK (kunci bulanan) yang disuplai lewat <see cref="MonthlyKey"/>.
-/// Isi file dienkripsi per-chunk (AES-256-GCM) supaya file besar tidak perlu dimuat penuh ke
-/// memori, dan supaya truncation/reorder/append pada file terenkripsi selalu terdeteksi.
+/// Isi file dienkripsi per-chunk supaya file besar tidak perlu dimuat penuh ke memori, dan supaya
+/// truncation/reorder/append pada file terenkripsi selalu terdeteksi. Primitif AEAD-nya bisa dipilih
+/// per file (<see cref="AlgorithmProfile"/>, lihat <see cref="AeadCipherFactory"/>); dekripsi otomatis
+/// memakai algoritma yang tercatat di header, pemanggil tidak perlu tahu di muka.
 /// </summary>
 public static class EnvelopeCipher
 {
@@ -25,6 +27,7 @@ public static class EnvelopeCipher
         Stream output,
         MonthlyKey kek,
         string originalFileName,
+        AlgorithmProfile algorithm = AlgorithmProfile.AesGcm256,
         int chunkSize = Ts4Constants.DefaultChunkSize,
         IProgress<double>? progress = null)
     {
@@ -44,7 +47,7 @@ public static class EnvelopeCipher
             var wrapNonce = CryptoRandom.GetBytes(Ts4Constants.WrapNonceSize);
             var wrappedDek = new byte[Ts4Constants.DekSize];
             var wrapTag = new byte[Ts4Constants.GcmTagSize];
-            using (var kekCipher = new AesGcm(kek.KeyMaterial, Ts4Constants.GcmTagSize))
+            using (var kekCipher = AeadCipherFactory.Create(algorithm, kek.KeyMaterial))
             {
                 kekCipher.Encrypt(wrapNonce, dek, wrappedDek, wrapTag, keyIdBytes);
             }
@@ -54,7 +57,7 @@ public static class EnvelopeCipher
             var nameBytes = Encoding.UTF8.GetBytes(originalFileName);
             var encryptedName = new byte[nameBytes.Length];
             var nameTag = new byte[Ts4Constants.GcmTagSize];
-            using (var dekCipherForName = new AesGcm(dek, Ts4Constants.GcmTagSize))
+            using (var dekCipherForName = AeadCipherFactory.Create(algorithm, dek))
             {
                 dekCipherForName.Encrypt(nameNonce, nameBytes, encryptedName, nameTag, keyIdBytes);
             }
@@ -63,7 +66,7 @@ public static class EnvelopeCipher
 
             var header = new Ts4Header
             {
-                AlgorithmProfile = AlgorithmProfile.AesGcm256,
+                AlgorithmProfile = algorithm,
                 KeyId = kek.KeyId,
                 ChunkSize = (uint)chunkSize,
                 ContentBaseNonce = contentBaseNonce,
@@ -78,7 +81,7 @@ public static class EnvelopeCipher
             var headerBytes = Ts4FileFormat.SerializeHeader(header);
             output.Write(headerBytes);
 
-            EncryptChunks(plaintextInput, output, dek, contentBaseNonce, headerBytes, chunkSize, progress);
+            EncryptChunks(plaintextInput, output, dek, algorithm, contentBaseNonce, headerBytes, chunkSize, progress);
         }
         finally
         {
@@ -138,20 +141,20 @@ public static class EnvelopeCipher
         var dek = new byte[Ts4Constants.DekSize];
         try
         {
-            using (var kekCipher = new AesGcm(kek.KeyMaterial, Ts4Constants.GcmTagSize))
+            using (var kekCipher = AeadCipherFactory.Create(header.AlgorithmProfile, kek.KeyMaterial))
             {
                 kekCipher.Decrypt(header.WrapNonce, header.WrappedDek, header.WrapTag, dek, keyIdBytes);
             }
 
             var nameBuffer = new byte[header.EncryptedFileName.Length];
-            using (var dekCipherForName = new AesGcm(dek, Ts4Constants.GcmTagSize))
+            using (var dekCipherForName = AeadCipherFactory.Create(header.AlgorithmProfile, dek))
             {
                 dekCipherForName.Decrypt(header.NameNonce, header.EncryptedFileName, header.NameTag, nameBuffer, keyIdBytes);
             }
 
             var originalFileName = Encoding.UTF8.GetString(nameBuffer);
 
-            DecryptChunks(ciphertextInput, output, dek, header.ContentBaseNonce, headerBytes, (int)header.ChunkSize, progress);
+            DecryptChunks(ciphertextInput, output, dek, header.AlgorithmProfile, header.ContentBaseNonce, headerBytes, (int)header.ChunkSize, progress);
 
             return new DecryptResult(originalFileName, header.KeyId, header.AlgorithmProfile);
         }
@@ -162,10 +165,10 @@ public static class EnvelopeCipher
     }
 
     private static void EncryptChunks(
-        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize,
+        Stream input, Stream output, byte[] dek, AlgorithmProfile algorithm, byte[] baseNonce, byte[] headerBytes, int chunkSize,
         IProgress<double>? progress)
     {
-        using var cipher = new AesGcm(dek, Ts4Constants.GcmTagSize);
+        using var cipher = AeadCipherFactory.Create(algorithm, dek);
         var reader = new ChunkedPlaintextReader(input, chunkSize);
         var plainBuffer = new byte[chunkSize];
         var cipherBuffer = new byte[chunkSize];
@@ -211,10 +214,10 @@ public static class EnvelopeCipher
     }
 
     private static void DecryptChunks(
-        Stream input, Stream output, byte[] dek, byte[] baseNonce, byte[] headerBytes, int chunkSize,
+        Stream input, Stream output, byte[] dek, AlgorithmProfile algorithm, byte[] baseNonce, byte[] headerBytes, int chunkSize,
         IProgress<double>? progress)
     {
-        using var cipher = new AesGcm(dek, Ts4Constants.GcmTagSize);
+        using var cipher = AeadCipherFactory.Create(algorithm, dek);
         var aad = BuildAadBuffer(headerBytes);
         var totalBytes = input.CanSeek ? input.Length : (long?)null;
 

@@ -17,6 +17,12 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
     protected override AuditAction FailureAction => AuditAction.FileEncryptFailed;
     protected override string PastTense => "dienkripsi";
 
+    public IReadOnlyList<AlgorithmOption> AvailableAlgorithms => AlgorithmOption.All;
+
+    /// <summary>Algoritma yang dipakai untuk enkripsi berikutnya (file tunggal maupun bundle). Dekripsi selalu otomatis mengikuti header, tidak perlu dipilih.</summary>
+    [ObservableProperty]
+    private AlgorithmOption _selectedAlgorithm = AlgorithmOption.AesGcm256;
+
     /// <summary>Gabungkan semua file di daftar menjadi SATU file .ts4 (bundle) alih-alih satu .ts4 per file.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RunButtonText))]
@@ -66,10 +72,10 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
             using var input = File.OpenRead(inputPath);
             using var output = File.Create(outputPath);
             outputCreated = true;
-            EnvelopeCipher.Encrypt(input, output, kek, Path.GetFileName(inputPath), progress: progress);
+            EnvelopeCipher.Encrypt(input, output, kek, Path.GetFileName(inputPath), algorithm: SelectedAlgorithm.Profile, progress: progress);
 
             producedThisRun.Add(outputPath);
-            return new BatchFileResult(outputPath, $"file={Path.GetFileName(inputPath)}, keyId={kek.KeyId}");
+            return new BatchFileResult(outputPath, $"file={Path.GetFileName(inputPath)}, keyId={kek.KeyId}, algoritma={SelectedAlgorithm.Profile}");
         }
         catch
         {
@@ -157,6 +163,7 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
 
         var sources = Files.Zip(entryNames, (f, name) => new BundleSource(f.Path, name)).ToList();
         var outputPath = FirstFreeBundlePath(folder, bundleName);
+        var algorithm = SelectedAlgorithm.Profile;
 
         using var cts = BeginRun(); // sebelum status Running: Batal sudah berlaku sejak proses dimulai
         SetBusy(true);
@@ -166,9 +173,9 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
 
         try
         {
-            var keyId = await Task.Run(() => WriteBundle(sources, outputPath, bundleName, reporter, cts.Token));
+            var keyId = await Task.Run(() => WriteBundle(sources, outputPath, bundleName, algorithm, reporter, cts.Token));
 
-            Record(SuccessAction, $"bundle={bundleName}, files={sources.Count}, keyId={keyId}, isi={ListForAudit(entryNames)}");
+            Record(SuccessAction, $"bundle={bundleName}, files={sources.Count}, keyId={keyId}, algoritma={algorithm}, isi={ListForAudit(entryNames)}");
             foreach (var f in Files)
             {
                 f.Message = outputPath;
@@ -208,7 +215,7 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
     }
 
     /// <summary>Menulis bundle ke file sementara lalu memindahkannya, jadi hasil setengah jadi tidak pernah muncul sebagai .ts4 yang valid.</summary>
-    private string WriteBundle(IReadOnlyList<BundleSource> sources, string outputPath, string bundleName, IProgress<double> progress, CancellationToken cancellation)
+    private string WriteBundle(IReadOnlyList<BundleSource> sources, string outputPath, string bundleName, AlgorithmProfile algorithm, IProgress<double> progress, CancellationToken cancellation)
     {
         var partialPath = outputPath + ".partial";
         try
@@ -217,7 +224,7 @@ public partial class EncryptViewModel(MonthlyKeyManager keyManager, IAuditLog au
             using (var input = new BundleReadStream(sources, cancellation))
             using (var output = new FileStream(partialPath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                EnvelopeCipher.Encrypt(input, output, kek, bundleName + BundleNames.Extension, progress: progress);
+                EnvelopeCipher.Encrypt(input, output, kek, bundleName + BundleNames.Extension, algorithm: algorithm, progress: progress);
             }
 
             File.Move(partialPath, outputPath);

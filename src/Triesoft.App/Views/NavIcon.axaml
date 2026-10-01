@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:Triesoft.App.Converters"
+             x:Class="Triesoft.App.Views.NavIcon"
+             x:Name="Root" Width="18" Height="18">
+    <UserControl.Resources>
+        <conv:NavIconKindToGeometryConverter x:Key="NavIconKindToGeometryConverter" />
+    </UserControl.Resources>
+    <Path Data="{Binding Kind, ElementName=Root, Converter={StaticResource NavIconKindToGeometryConverter}}"
+          Stroke="{StaticResource Brush.TextOnSidebarMuted}" StrokeThickness="1.6"
+          StrokeLineCap="Round" StrokeJoin="Round" Fill="Transparent"
+          Width="18" Height="18" Stretch="Uniform" />
+</UserControl>
